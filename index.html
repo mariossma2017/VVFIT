@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>VV FIT — Treino, Dieta e Evolução</title>
+  <meta name="description" content="Aplicativo pessoal de acompanhamento de treino, alimentação e evolução corporal.">
+  <meta name="theme-color" content="#7c4da0">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div id="app"></div>
+
+  <button type="button" id="btn-instalar-app" class="btn btn-primario fab-instalar hidden"
+    style="position:fixed;left:16px;right:16px;bottom:calc(var(--nav-altura) + var(--safe-bottom) + 10px);z-index:25;max-width:528px;margin:0 auto;">
+    ⬇️ Instalar aplicativo
+  </button>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="./data.js"></script>
+  <script src="./storage.js"></script>
+  <script src="./core.js"></script>
+  <script src="./screens/inicio.js"></script>
+  <script src="./screens/treino.js"></script>
+  <script src="./screens/alimentacao.js"></script>
+  <script src="./screens/evolucao.js"></script>
+  <script src="./screens/perfil.js"></script>
+  <script src="./app.js"></script>
+  <script>
+    document.getElementById("btn-instalar-app").addEventListener("click", instalarApp);
+  </script>
+</body>
+</html>
