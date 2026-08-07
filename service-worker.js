@@ -1,6 +1,6 @@
 /* VV FIT — service worker: cache offline e atualização de versão */
 
-const CACHE_VERSAO = "vvfit-v2.0.0";
+const CACHE_VERSAO = "vvfit-v2.1.0";
 
 const ARQUIVOS_ESSENCIAIS = [
   "./",

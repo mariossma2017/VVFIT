@@ -71,7 +71,35 @@ function selecionarDiaTreino(dia) {
 /* ---------------- Modelo de dados da sessão do dia ---------------- */
 
 function obterSessaoTreino(data, diaSemana) {
-  return DB.getTreinos().find((t) => t.data === data && t.diaSemana === diaSemana) || null;
+  const sessao = DB.getTreinos().find((t) => t.data === data && t.diaSemana === diaSemana) || null;
+  if (sessao) reconciliarExerciciosComProtocolo(sessao, diaSemana);
+  return sessao;
+}
+
+// Garante que sessões já salvas ganhem exercícios adicionados/corrigidos
+// posteriormente no protocolo (data.js), sem apagar nenhum status já registrado.
+function reconciliarExerciciosComProtocolo(sessao, diaSemana) {
+  const proto = PROTOCOLO.treinos[diaSemana];
+  if (!proto || !proto.exercicios) return;
+  let alterou = false;
+  proto.exercicios.forEach((ex) => {
+    if (!sessao.exercicios.some((e) => e.nome === ex.nome)) {
+      sessao.exercicios.push({
+        nome: ex.nome,
+        ordem: ex.ordem,
+        status: null,
+        cargaDetalhe: "",
+        repsDetalhe: "",
+        rpeDetalhe: "",
+        observacaoDetalhe: ""
+      });
+      alterou = true;
+    }
+  });
+  if (alterou) {
+    sessao.exercicios.sort((a, b) => a.ordem - b.ordem);
+    salvarSessaoTreino(sessao);
+  }
 }
 
 function obterOuCriarSessaoTreino(data, diaSemana) {
@@ -190,7 +218,6 @@ function renderConteudoDia(dia) {
         ${proto.grupos.map((g) => `<span class="tag">${Util.escapeHtml(g)}</span>`).join("")}
       </div>
       ${proto.observacaoDia ? `<p class="mt-8">${Util.escapeHtml(proto.observacaoDia)}</p>` : ""}
-      ${proto.incompleto ? `<div class="sugestao-progressao">Ficha deste dia ainda não está completa no protocolo original. Assim que os dados forem enviados, este campo será atualizado.</div>` : ""}
       <div class="secao-titulo">Aquecimento</div>
       <p class="texto-suave">${Util.escapeHtml(proto.aquecimento.equipamento || "—")} · ${Util.escapeHtml(proto.aquecimento.tempo || "—")}</p>
       ${proto.aquecimento.intensidade ? `<p class="texto-suave">${Util.escapeHtml(proto.aquecimento.intensidade)}</p>` : ""}

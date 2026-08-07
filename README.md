@@ -123,7 +123,6 @@ Também é possível exportar registros individuais em **CSV** (treinos, aliment
 
 ## 8. Limitações técnicas existentes
 
-- **Quarta-feira sem ficha detalhada:** o documento original menciona a quarta-feira como um dos dois dias de treino de glúteo da semana (citada como "mesma técnica de quarta" na descrição do hip thrust de sexta-feira), mas não descreve os exercícios completos desse dia. Por instrução do protocolo, nenhum exercício foi inventado — o dia aparece no app com aviso de ficha incompleta, pronto para edição futura em `data.js`.
 - **Gráficos em SVG nativo:** em vez de depender da biblioteca Chart.js (que exigiria carregamento externo), os gráficos de evolução foram implementados em SVG puro, garantindo funcionamento 100% offline sem dependências externas.
 - **Fotos armazenadas como imagem:** as fotos são salvas no IndexedDB do navegador; não há compressão avançada, então um número muito grande de fotos em alta resolução pode ocupar bastante espaço no aparelho.
 - **Sem notificações push:** o app não envia lembretes fora do horário em que estiver aberto (não há backend nem permissão de notificação push configurada), conforme pedido de não depender de serviços externos.

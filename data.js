@@ -441,16 +441,109 @@ const PROTOCOLO = {
       diaSemana: "quarta",
       label: "Quarta-feira",
       tipo: "treino",
-      nome: "Glúteos (detalhes não especificados no documento)",
-      grupos: ["Glúteos"],
+      nome: "Posteriores, Glúteos, Panturrilha + Cardio",
+      grupos: ["Posteriores", "Glúteos", "Panturrilha"],
       objetivoDia: "",
       observacaoDia:
-        "O documento original cita a quarta-feira como o primeiro dos dois dias de glúteo da semana (junto com sexta-feira) e faz referência à \"mesma técnica de quarta\" ao descrever o hip thrust de sexta-feira, mas não detalha a ficha completa deste dia. Campo preparado para edição futura — nenhum exercício foi inventado.",
-      aquecimento: { equipamento: "", tempo: "", intensidade: "" },
-      exercicios: [],
-      cardio: { equipamento: "", tempo: "", intensidade: "", objetivo: "" },
-      progressao: "",
-      incompleto: true
+        "Esse é um dos dias mais importantes para o objetivo — glúteos foi identificado como ponto de excelente potencial de desenvolvimento nas fotos, então vamos explorar bem esse grupo aqui e reforçar na sexta também.",
+      aquecimento: {
+        equipamento: "Bike ergométrica ou step",
+        tempo: "5-7 min",
+        intensidade: "leve (RPE 4/10), seguido de ativação de glúteo com elástico (mini band) — 2 séries de 15 caminhadas laterais, para \"acordar\" o glúteo antes da carga"
+      },
+      exercicios: [
+        {
+          ordem: 1,
+          nome: "Stiff com barra",
+          equipamento: "Barra + anilhas",
+          series: 4,
+          repeticoes: "8-10",
+          descanso: "90s",
+          cadencia: "3-1-1-0 (3s descendo controlado, 1s pausa no alongamento, 1s subindo)",
+          intensidade: "moderada-alta (RPE 7-8/10)",
+          grupoMuscular: "Posterior de coxa (isquiotibiais) e glúteo (função de extensão de quadril)",
+          execucao: "Joelhos levemente flexionados (fixos), quadril \"empurra\" para trás, barra desliza próxima às pernas, lombar sempre neutra.",
+          errosComuns: "Arredondar a lombar; flexionar o joelho como se fosse agachamento (vira outro exercício).",
+          objetivo: "Exercício prioritário do dia — maior ativação de posterior de coxa e um dos melhores para alongamento sob carga (excelente estímulo de hipertrofia)."
+        },
+        {
+          ordem: 2,
+          nome: "Elevação pélvica com barra (hip thrust)",
+          equipamento: "Banco + barra + anilhas (e almofada de proteção)",
+          series: 4,
+          repeticoes: "10-12",
+          descanso: "90s",
+          cadencia: "2-1-2-0 (segurar 1s no topo com contração máxima)",
+          intensidade: "moderada-alta",
+          grupoMuscular: "Glúteo máximo (isolamento direto)",
+          execucao: "Costas apoiadas no banco na altura da escápula, subir até quadril totalmente estendido, contrair glúteo forte no topo, queixo levemente recolhido.",
+          errosComuns: "Hiperextender a lombar no topo (compensação); não subir até extensão completa.",
+          objetivo: "Exercício com maior evidência científica para hipertrofia de glúteo — prioridade alta considerando o objetivo e potencial de desenvolvimento nessa região."
+        },
+        {
+          ordem: 3,
+          nome: "Cadeira flexora (posterior)",
+          equipamento: "Máquina flexora (sentada ou deitada)",
+          series: 3,
+          repeticoes: "12-15",
+          descanso: "75s",
+          cadencia: "2-1-2-0",
+          intensidade: "moderada",
+          grupoMuscular: "Isquiotibiais (isolamento)",
+          execucao: "Quadril fixo no banco, flexão completa do joelho, controle na volta.",
+          errosComuns: "Tirar o quadril do encosto para \"roubar\" o movimento.",
+          objetivo: "Complementa o stiff com estímulo de isolamento, garantindo volume adequado para o grupo."
+        },
+        {
+          ordem: 4,
+          nome: "Agachamento sumô com halter ou kettlebell",
+          equipamento: "Halter ou kettlebell",
+          series: 3,
+          repeticoes: "12-15",
+          descanso: "75s",
+          cadencia: "2-1-2-0",
+          intensidade: "moderada",
+          grupoMuscular: "Glúteo, adutores, quadríceps (ênfase em glúteo pela postura mais aberta)",
+          execucao: "Pés bem afastados, pontas levemente para fora, descer mantendo joelho na linha do pé, tronco ereto.",
+          errosComuns: "Joelho ultrapassando muito a ponta do pé sem necessidade; perder a verticalidade do tronco.",
+          objetivo: "Variação de agachamento com maior ênfase em glúteo e adutor, complementando o trabalho de quadríceps já feito na segunda."
+        },
+        {
+          ordem: 5,
+          nome: "Cadeira abdutora",
+          equipamento: "Máquina abdutora",
+          series: 3,
+          repeticoes: "15-20",
+          descanso: "60s",
+          cadencia: "2-1-2-0 (segurar 1s na abertura máxima)",
+          intensidade: "moderada",
+          grupoMuscular: "Glúteo médio (importante para estabilidade de quadril e \"formato\" lateral do glúteo)",
+          execucao: "Tronco ereto, movimento controlado, sem usar impulso.",
+          errosComuns: "Fazer o movimento rápido demais, perdendo a tensão muscular.",
+          objetivo: "Isolamento de glúteo médio, região que dá formato lateral e ajuda na estabilidade do quadril durante caminhada e outros exercícios."
+        },
+        {
+          ordem: 6,
+          nome: "Panturrilha sentada",
+          equipamento: "Máquina de panturrilha sentada",
+          series: 4,
+          repeticoes: "15-20",
+          descanso: "45s",
+          cadencia: "1-1-2-0 (pausa no alongamento embaixo)",
+          intensidade: "moderada",
+          grupoMuscular: "Sóleo (musculatura profunda da panturrilha, diferente do gastrocnêmio trabalhado em pé na segunda)",
+          execucao: "Amplitude completa, sem \"quicar\" o peso.",
+          errosComuns: "Amplitude curta, tirar a velocidade do movimento.",
+          objetivo: "Complementar o estímulo de panturrilha já feito na segunda, trabalhando a musculatura em ângulo diferente (joelho flexionado)."
+        }
+      ],
+      cardio: {
+        equipamento: "Esteira (caminhada inclinada) ou elíptico",
+        tempo: "15-20 min",
+        intensidade: "moderada (RPE 5-6/10)",
+        objetivo: "Gasto calórico adicional sem comprometer a recuperação da musculatura trabalhada hoje"
+      },
+      progressao: ""
     },
 
     quinta: {
