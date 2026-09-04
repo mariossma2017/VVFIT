@@ -1,14 +1,16 @@
 /* VV FIT — service worker: cache offline e atualização de versão */
 
-const CACHE_VERSAO = "vvfit-v2.1.0";
+const CACHE_VERSAO = "vvfit-v3.0.0";
 
 const ARQUIVOS_ESSENCIAIS = [
   "./",
   "./index.html",
   "./style.css",
+  "./vendor/jspdf.umd.min.js",
   "./data.js",
   "./storage.js",
   "./core.js",
+  "./resumo.js",
   "./app.js",
   "./screens/inicio.js",
   "./screens/treino.js",

@@ -1,783 +1,378 @@
 /*
  * VV FIT — dados oficiais do protocolo
- * Fonte: "Treino VV.docx"
- * Este arquivo é somente leitura em tempo de execução: contém o protocolo fixo
- * (perfil base, plano alimentar, treinos). Os registros pessoais da usuária
- * (cargas, refeições marcadas, água, evolução, check-ins) ficam separados,
- * salvos em localStorage/IndexedDB via app.js.
+ *
+ * PROTOCOLO        → plano vigente (Fase 1). Fonte: "Plano Verônica fase 1.pdf"
+ *                    (PROTOCOLO 2026 — Key Araújo).
+ * PROTOCOLO_LEGADO → plano anterior (fonte: "Treino VV.docx"), mantido apenas
+ *                    para calcular corretamente o "previsto" de datas anteriores
+ *                    ao início da Fase 1 (ver core.js → Planos).
+ *
+ * Este arquivo é somente leitura em tempo de execução. Os registros pessoais da
+ * usuária (treinos, refeições, água, AEJ/escada, medidas, sono/disposição,
+ * check-ins, fotos) ficam separados, em localStorage/IndexedDB (ver storage.js).
+ *
+ * IMPORTANTE — fidelidade ao documento:
+ *  - Nenhuma caloria, macronutriente, horário ou meta foi inventado. O PDF da
+ *    Fase 1 não traz esses números, então eles não existem aqui (ficam null e a
+ *    interface os oculta).
+ *  - Alternativas com "ou" são preservadas como um único item ("A ou B"), nunca
+ *    desmembradas em alimentos cumulativos.
+ *  - A suplementação é transcrita como INFORMATIVO do plano recebido. O app não
+ *    cria prescrições, não ajusta doses e não recomenda nada automaticamente.
  */
 
 const PROTOCOLO = {
-  versao: "1.0",
+  versao: "3.0",
+
+  fase: {
+    id: "fase1",
+    nome: "Fase 1",
+    fonte: "Plano Verônica fase 1.pdf (PROTOCOLO 2026 — Key Araújo)",
+    // A data de início é configurável pela usuária em Perfil → Fase do plano.
+    // O valor efetivo fica em config.faseInicio (storage.js). Este campo é só
+    // um rótulo de referência.
+    observacao:
+      "Plano registrado como Fase 1. A data de início é configurável e o histórico anterior é preservado."
+  },
 
   perfilBase: {
+    // Dados que a usuária pode ajustar em Perfil. Não vieram do PDF da Fase 1;
+    // são herdados do cadastro anterior e continuam editáveis.
     idade: 36,
     alturaCm: 156,
     pesoInicialKg: 74,
-    objetivo: "Redução de gordura com preservação de massa muscular",
-    frequenciaTreino: "5 dias por semana",
-    diasTreino: ["segunda", "terca", "quarta", "sexta", "sabado"],
-    diasDescanso: ["quinta", "domingo"],
+    objetivo: "Redução de gordura com desenvolvimento de glúteo e posterior",
+    frequenciaTreino: "6 dias por semana (segunda a sábado)",
+    diasTreino: ["segunda", "terca", "quarta", "quinta", "sexta", "sabado"],
+    diasDescanso: ["domingo"],
     horarioTreinoHabitual: "20:00",
     horarioSonoHabitual: "23:30"
   },
 
-  gastoEnergetico: {
-    formula: "Mifflin-St Jeor",
-    tmbKcal: 1374,
-    fatorAtividade: 1.55,
-    getKcal: 2130,
-    deficitPercentual: 17,
-    metaCaloricaKcal: 1780,
-    observacao:
-      "Esse número é uma estimativa baseada em fórmula populacional, não uma medição real do gasto. Serve como ponto de partida e será ajustado conforme a evolução real nas próximas semanas — se o peso não se mexer em 2-3 semanas com boa adesão, recalcula-se."
-  },
-
-  macros: {
-    proteina: { quantidadeG: 148, gPorKg: 2.0, kcal: 592, logica: "Alta ingestão para preservar massa muscular em déficit" },
-    gordura: { quantidadeG: 65, gPorKg: 0.9, kcal: 585, logica: "Mínimo necessário para hormônios e saciedade" },
-    carboidrato: { quantidadeG: 150, kcal: 600, logica: "Restante, priorizado no pré/pós-treino" },
-    totalKcal: 1777
-  },
+  // A Fase 1 não define gasto energético nem metas calóricas. Mantido como null
+  // para deixar explícito que o número não existe no documento.
+  gastoEnergetico: null,
+  macros: null,
 
   agua: {
-    metaLitrosMin: 2.2,
-    metaLitrosMax: 2.5,
-    metaMlPadrao: 2350,
-    observacao: "Distribuída ao longo do dia — maior parte antes das 21h para não atrapalhar o sono com idas ao banheiro."
+    // Do PDF: "INGESTÃO HÍDRICA: 3 litros de água + 500 ml de chá (cavalinha)".
+    metaLitrosMin: 3,
+    metaLitrosMax: 3,
+    metaMlPadrao: 3000,
+    chaMl: 500,
+    chaTipo: "cavalinha",
+    observacao:
+      "Meta do plano: 3 litros de água por dia + 500 ml de chá de cavalinha (contabilizado à parte). Não utilizar açúcar nos alimentos nem óleo. Não ultrapassar 6 g de sal por dia."
   },
 
+  /* ---------------- Plano alimentar — Fase 1 (5 refeições) ---------------- */
+  // Cada refeição tem UMA composição (o PDF não traz 2 opções por refeição).
+  // Itens com "ou" ficam em uma única linha, preservando a alternativa.
   refeicoes: [
     {
-      id: "cafe_manha",
+      id: "ref1",
       ordem: 1,
-      nome: "Café da manhã",
-      horario: "08:30",
-      kcalAprox: 440,
-      finalidade:
-        "Proteína logo cedo ativa a síntese proteica muscular e melhora saciedade até o pré-treino.",
+      nome: "1ª Refeição",
+      horario: "",
+      kcalAprox: null,
+      finalidade: "",
       opcoes: [
         {
           id: "opcao1",
-          nome: "Opção 1",
+          nome: "Composição",
           itens: [
-            { alimento: "3 ovos inteiros mexidos", quantidade: "150g", proteinaG: 19, carboidratoG: 1, gorduraG: 15 },
-            { alimento: "2 fatias de pão integral", quantidade: "50g", proteinaG: 6, carboidratoG: 24, gorduraG: 2 },
-            { alimento: "1 banana média", quantidade: "100g", proteinaG: 1, carboidratoG: 23, gorduraG: 0 }
+            { alimento: "2 fatias de pão integral", quantidade: "" },
+            { alimento: "1 ovo inteiro", quantidade: "" },
+            { alimento: "Requeijão cremoso light", quantidade: "10 g" },
+            { alimento: "Mamão", quantidade: "100 g" },
+            { alimento: "Café preto (adoçante e leite desnatado opcionais)", quantidade: "" }
           ],
-          totalAprox: { proteinaG: 26, carboidratoG: 48, gorduraG: 17, kcal: 445 },
+          totalAprox: null,
           observacao: ""
-        },
-        {
-          id: "opcao2",
-          nome: "Opção 2",
-          itens: [
-            { alimento: "Iogurte natural integral", quantidade: "200g", proteinaG: 7, carboidratoG: 8, gorduraG: 6 },
-            { alimento: "Aveia em flocos", quantidade: "40g", proteinaG: 5, carboidratoG: 24, gorduraG: 3 },
-            { alimento: "Pasta de amendoim", quantidade: "1 colher de sopa (15g)", proteinaG: 4, carboidratoG: 3, gorduraG: 8 }
-          ],
-          totalAprox: { proteinaG: 16, carboidratoG: 35, gorduraG: 17, kcal: 340 },
-          observacao: "Ajustar com 1 fruta extra se precisar bater a meta."
         }
       ],
-      substituicoes: [
-        "Ovos ↔ 100g frango desfiado (23g P) ↔ 150g cottage (18g P)",
-        "Pão integral ↔ 60g goma de tapioca (2 tapiocas pequenas)",
-        "Aveia ↔ granola sem açúcar (mesma quantidade em gramas)"
-      ]
+      substituicoes: []
     },
     {
-      id: "almoco",
+      id: "ref2",
       ordem: 2,
-      nome: "Almoço",
-      horario: "13:00",
-      kcalAprox: 550,
-      finalidade:
-        "Maior refeição do dia, mantendo arroz e feijão (carboidrato complexo + proteína magra) para sustentar energia até o pré-treino.",
+      nome: "2ª Refeição",
+      horario: "",
+      kcalAprox: null,
+      finalidade: "",
       opcoes: [
         {
           id: "opcao1",
-          nome: "Opção 1",
+          nome: "Composição",
           itens: [
-            { alimento: "Frango grelhado (peso cru)", quantidade: "150g", proteinaG: 33, carboidratoG: 0, gorduraG: 5 },
-            { alimento: "Arroz branco (100g cozido)", quantidade: "4 colheres de sopa", proteinaG: 2, carboidratoG: 28, gorduraG: 0 },
-            { alimento: "Feijão", quantidade: "1 concha média (80g)", proteinaG: 5, carboidratoG: 14, gorduraG: 0 },
-            { alimento: "Salada crua à vontade + 1 fio de azeite (5ml)", quantidade: "", proteinaG: 0, carboidratoG: 0, gorduraG: 5 },
-            { alimento: "Legumes refogados", quantidade: "100g", proteinaG: 0, carboidratoG: 0, gorduraG: 0 }
+            { alimento: "Arroz cozido", quantidade: "70 g" },
+            { alimento: "Peito de frango ou carne magra", quantidade: "100 g frango ou 80 g carne magra" },
+            { alimento: "Mix de legumes (cenoura, chuchu, abobrinha)", quantidade: "100 g" },
+            { alimento: "Salada verde à vontade (free)", quantidade: "" }
           ],
-          totalAprox: { proteinaG: 40, carboidratoG: 44, gorduraG: 10, kcal: 445 },
+          totalAprox: null,
           observacao: ""
-        },
-        {
-          id: "opcao2",
-          nome: "Opção 2",
-          itens: [
-            { alimento: "Patinho em cubos (peso cru)", quantidade: "150g", proteinaG: 32, carboidratoG: 0, gorduraG: 6 },
-            { alimento: "Batata-doce cozida", quantidade: "100g", proteinaG: 1, carboidratoG: 20, gorduraG: 0 },
-            { alimento: "Legumes refogados (abobrinha, cenoura, brócolis)", quantidade: "100g", proteinaG: 0, carboidratoG: 0, gorduraG: 0 },
-            { alimento: "Salada crua à vontade + 1 fio de azeite (5ml)", quantidade: "", proteinaG: 0, carboidratoG: 0, gorduraG: 0 }
-          ],
-          totalAprox: { proteinaG: 33, carboidratoG: 22, gorduraG: 11, kcal: 320 },
-          observacao: "Adicionar mais 50g de batata-doce se precisar fechar a meta."
         }
       ],
-      substituicoes: [
-        "Frango ↔ 150g peixe (tilápia/merluza) ↔ 150g carne vermelha magra (patinho/coxão mole)",
-        "Arroz ↔ 100g batata-doce ↔ 80g mandioca cozida",
-        "Feijão ↔ 60g lentilha cozida ↔ 60g grão de bico"
-      ]
+      substituicoes: []
     },
     {
-      id: "cafe_tarde",
+      id: "ref3",
       ordem: 3,
-      nome: "Café da tarde (pré-treino)",
-      horario: "16:30",
-      kcalAprox: 330,
-      finalidade:
-        "Carboidrato de rápida absorção + proteína moderada, para chegar com energia no treino às 20h sem pesar no estômago.",
+      nome: "3ª Refeição — lanche da tarde",
+      horario: "",
+      kcalAprox: null,
+      finalidade: "",
       opcoes: [
         {
           id: "opcao1",
-          nome: "Opção 1",
+          nome: "Composição",
           itens: [
-            { alimento: "Banana média", quantidade: "100g", proteinaG: 0, carboidratoG: 23, gorduraG: 0 },
-            { alimento: "Whey protein (1 scoop)", quantidade: "30g", proteinaG: 24, carboidratoG: 2, gorduraG: 2 }
+            { alimento: "Mix de frutas (mamão, morango, maçã, pera)", quantidade: "150 g" },
+            { alimento: "Iogurte desnatado", quantidade: "1 unidade (160 ml)" },
+            { alimento: "Whey protein", quantidade: "30 g" }
           ],
-          totalAprox: { proteinaG: 25, carboidratoG: 25, gorduraG: 2, kcal: 220 },
-          observacao: "Adicionar 1 fatia de pão se precisar de mais carboidrato."
-        },
-        {
-          id: "opcao2",
-          nome: "Opção 2",
-          itens: [
-            { alimento: "Pão integral", quantidade: "2 fatias (50g)", proteinaG: 6, carboidratoG: 24, gorduraG: 0 },
-            { alimento: "Peito de peru", quantidade: "2 fatias (30g)", proteinaG: 6, carboidratoG: 0, gorduraG: 1 },
-            { alimento: "Maçã", quantidade: "1 fruta (100g)", proteinaG: 0, carboidratoG: 14, gorduraG: 0 }
-          ],
-          totalAprox: { proteinaG: 12, carboidratoG: 38, gorduraG: 1, kcal: 220 },
+          totalAprox: null,
           observacao: ""
         }
       ],
-      substituicoes: [
-        "Whey ↔ 2 ovos cozidos ↔ 100g iogurte proteico",
-        "Pão ↔ 3 biscoitos de arroz ↔ 40g tapioca"
-      ]
+      substituicoes: []
     },
     {
-      id: "jantar",
+      id: "ref4",
       ordem: 4,
-      nome: "Jantar (pós-treino)",
-      horario: "22:00",
-      kcalAprox: 460,
-      finalidade:
-        "Proteína generosa para recuperação muscular pós-treino; carboidrato mais controlado nessa refeição porque é tarde (22h) e o sono é às 23h30 — carbo em excesso à noite pode prejudicar ainda mais um sono que já é de baixa qualidade.",
+      nome: "4ª Refeição — pré-treino",
+      horario: "",
+      kcalAprox: null,
+      finalidade: "",
       opcoes: [
         {
           id: "opcao1",
-          nome: "Opção 1",
+          nome: "Composição",
           itens: [
-            { alimento: "Peixe assado (tilápia)", quantidade: "150g", proteinaG: 31, carboidratoG: 0, gorduraG: 2 },
-            { alimento: "Purê de mandioquinha", quantidade: "100g", proteinaG: 0, carboidratoG: 20, gorduraG: 0 },
-            { alimento: "Legumes no vapor", quantidade: "100g", proteinaG: 0, carboidratoG: 0, gorduraG: 0 }
+            { alimento: "Pão integral", quantidade: "1 fatia" },
+            { alimento: "Doce de leite", quantidade: "20 g" }
           ],
-          totalAprox: { proteinaG: 31, carboidratoG: 22, gorduraG: 2, kcal: 225 },
-          observacao: "Ajustar porção de purê ou adicionar azeite conforme a meta do dia."
-        },
-        {
-          id: "opcao2",
-          nome: "Opção 2",
-          itens: [
-            { alimento: "Frango grelhado", quantidade: "150g", proteinaG: 33, carboidratoG: 0, gorduraG: 5 },
-            { alimento: "Omelete de 2 ovos com legumes", quantidade: "", proteinaG: 12, carboidratoG: 0, gorduraG: 10 },
-            { alimento: "Salada verde à vontade", quantidade: "", proteinaG: 0, carboidratoG: 0, gorduraG: 0 }
-          ],
-          totalAprox: { proteinaG: 45, carboidratoG: 3, gorduraG: 15, kcal: 330 },
+          totalAprox: null,
           observacao: ""
         }
       ],
-      substituicoes: [
-        "Peixe ↔ frango ↔ 150g carne magra",
-        "Purê ↔ 80g arroz ↔ 80g mandioca"
-      ]
+      substituicoes: []
+    },
+    {
+      id: "ref5",
+      ordem: 5,
+      nome: "5ª Refeição",
+      horario: "",
+      kcalAprox: null,
+      finalidade: "",
+      opcoes: [
+        {
+          id: "opcao1",
+          nome: "Composição",
+          itens: [
+            { alimento: "Batata inglesa ou arroz cozido ou abóbora", quantidade: "70 g batata ou 70 g arroz ou 100 g abóbora" },
+            { alimento: "Peito de frango ou carne magra", quantidade: "100 g frango ou 80 g carne magra" },
+            { alimento: "Mix de legumes (cenoura, beterraba, abobrinha)", quantidade: "100 g" },
+            { alimento: "Salada verde à vontade (free)", quantidade: "" }
+          ],
+          totalAprox: null,
+          observacao: ""
+        }
+      ],
+      substituicoes: []
     }
   ],
 
-  /*
-   * Observação sobre o documento-fonte: a seção de quarta-feira (dia de
-   * treino de glúteo, citado nas observações de segunda a sábado como
-   * "mesma técnica de quarta") não está detalhada no arquivo original —
-   * apenas referenciada. Por instrução do protocolo, nenhum exercício foi
-   * inventado: os campos ficam vazios e preparados para edição futura.
-   */
+  /* ---------------- Suplementação — INFORMATIVO do plano recebido ---------------- */
+  // Transcrição literal do PDF. Espaço de consulta apenas. O app não prescreve,
+  // não ajusta doses e não faz recomendações automáticas.
+  suplementacao: {
+    aviso:
+      "Informação transcrita do plano recebido (Plano Verônica fase 1.pdf). Espaço apenas para consulta. O aplicativo não cria prescrições, não ajusta doses e não faz recomendações automáticas. Qualquer dúvida deve ser tratada com o profissional responsável.",
+    blocos: [
+      {
+        titulo: "Pré AEJ",
+        itens: [
+          "10 mg ioimbina",
+          "500 ml de água",
+          "1ª refeição",
+          "1 cápsula de multivitamínico + 1 g de vitamina C",
+          "500 mg Morosil"
+        ]
+      },
+      {
+        titulo: "Antes de dormir",
+        itens: ["3 cápsulas de ômega 3"]
+      },
+      {
+        titulo: "Pré-treino (opções)",
+        itens: ["210 mg de cafeína OU pré-treino opcional (15 min antes do treino)"]
+      },
+      {
+        titulo: "Intra-treino",
+        itens: ["1 litro de água", "1 g de sal", "5 g de creatina"]
+      }
+    ]
+  },
+
+  /* ---------------- Orientações gerais (do PDF) ---------------- */
+  orientacoes: {
+    hidratacao:
+      "3 litros de água por dia + 500 ml de chá de cavalinha. Não utilizar açúcar nos alimentos nem óleo. Não ultrapassar 6 g de sal por dia.",
+    descansoEntreSeries:
+      "50 segundos entre séries normais; 60 segundos quando for bi-série.",
+    treino:
+      "Progredir a carga e executar os exercícios com amplitude. Alongar quando puder e fazer mobilidade.",
+    refeicaoLivre:
+      "1 refeição livre na semana, a cada 2 semanas (após avaliação).",
+    feedback:
+      "O feedback deve ser enviado a cada 2 semanas, em jejum, no sábado ou domingo."
+  },
+
+  /* ---------------- AEJ (aeróbico em jejum) ---------------- */
+  aej: {
+    minutos: 30,
+    dias: ["segunda", "terca", "quarta", "quinta", "sexta", "sabado"],
+    observacao: "AEJ 30 min todos os dias, exceto no domingo."
+  },
+
+  /* ---------------- Treinos — Fase 1 ---------------- */
+  // O PDF traz nome do exercício e esquema de séries/repetições. Não traz
+  // equipamento, cadência, execução, erros comuns nem objetivo — esses campos
+  // ficam vazios (não foram inventados).
   treinos: {
     segunda: {
       diaSemana: "segunda",
       label: "Segunda-feira",
       tipo: "treino",
-      nome: "Quadríceps + Panturrilha + Cardio",
-      grupos: ["Quadríceps", "Panturrilha"],
+      nome: "Glúteo + Posterior completo",
+      grupos: ["Glúteo", "Posterior"],
       objetivoDia: "",
-      observacaoDia: "",
-      aquecimento: {
-        equipamento: "Bike ergométrica ou esteira",
-        tempo: "5-7 min",
-        intensidade: "leve a moderada (RPE 4/10), só para elevar temperatura corporal e ativar articulações do joelho/quadril"
-      },
+      observacaoDia:
+        "Descanso entre séries: 50 s (série normal) / 60 s (bi-série). Progredir carga com amplitude; alongar e fazer mobilidade quando puder.",
+      aquecimento: { equipamento: "Mobilidade", tempo: "5 min", intensidade: "" },
       exercicios: [
-        {
-          ordem: 1,
-          nome: "Agachamento livre com barra",
-          equipamento: "Barra + anilhas, rack",
-          series: 4,
-          repeticoes: "8-10",
-          descanso: "90s",
-          cadencia: "3-1-1-0 (3s descendo, 1s pausa embaixo, 1s subindo)",
-          intensidade: "",
-          grupoMuscular: "Quadríceps, glúteo",
-          execucao: "Pés na largura dos ombros, quadril inicia o movimento para trás, joelho acompanha a linha do pé, tronco ereto.",
-          errosComuns: "Joelho colapsando para dentro; perder a lombar (arredondar as costas).",
-          objetivo: "Exercício multiarticular principal, maior recrutamento de quadríceps e glúteo, base para força de membros inferiores."
-        },
-        {
-          ordem: 2,
-          nome: "Leg press 45°",
-          equipamento: "Máquina leg press",
-          series: 3,
-          repeticoes: "12-15",
-          descanso: "75s",
-          cadencia: "2-0-1-0",
-          intensidade: "",
-          grupoMuscular: "Quadríceps",
-          execucao: "Pés na plataforma na largura dos quadris, não travar joelho na extensão total.",
-          errosComuns: "Descer demais e tirar o quadril do encosto (sobrecarrega lombar).",
-          objetivo: "Volume adicional de quadríceps com menor exigência de estabilização, boa opção após exercício mais pesado."
-        },
-        {
-          ordem: 3,
-          nome: "Cadeira extensora",
-          equipamento: "Máquina extensora",
-          series: 3,
-          repeticoes: "15",
-          descanso: "60s",
-          cadencia: "2-1-2-0 (segurar 1s no topo)",
-          intensidade: "",
-          grupoMuscular: "Quadríceps",
-          execucao: "Contração total no topo, controle na descida.",
-          errosComuns: "",
-          objetivo: "Isolamento de quadríceps, ótimo para finalizar o grupo muscular com pump."
-        },
-        {
-          ordem: 4,
-          nome: "Cadeira flexora (posterior, ativação leve)",
-          equipamento: "Máquina flexora",
-          series: 3,
-          repeticoes: "12",
-          descanso: "60s",
-          cadencia: "",
-          intensidade: "",
-          grupoMuscular: "Posterior de coxa",
-          execucao: "",
-          errosComuns: "",
-          objetivo: "Manter equilíbrio entre quadríceps e posteriores, prevenindo desbalanço muscular."
-        },
-        {
-          ordem: 5,
-          nome: "Panturrilha em pé",
-          equipamento: "Máquina ou smith",
-          series: 4,
-          repeticoes: "15-20",
-          descanso: "45s",
-          cadencia: "1-1-2-0 (pausa no alongamento)",
-          intensidade: "",
-          grupoMuscular: "Panturrilha",
-          execucao: "",
-          errosComuns: "Fazer o movimento muito rápido, sem amplitude completa.",
-          objetivo: "Hipertrofia de panturrilha, grupo que exige alto volume por ser resistente à fadiga."
-        }
+        { ordem: 1, nome: "Cadeira abdutora", esquema: "1x25 + 3x20", series: null, repeticoes: "1x25 + 3x20", descanso: "50s", biserie: false, equipamento: "", cadencia: "", intensidade: "", grupoMuscular: "Glúteo médio", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 2, nome: "Abdução no cross", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Polia (cross)", cadencia: "", intensidade: "", grupoMuscular: "Glúteo médio", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 3, nome: "Elevação pélvica", esquema: "", series: 4, repeticoes: "20", descanso: "50s", biserie: false, equipamento: "", cadencia: "", intensidade: "", grupoMuscular: "Glúteo máximo", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 4, nome: "Agachamento sumô com halter", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Halter", cadencia: "", intensidade: "", grupoMuscular: "Glúteo, adutores", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 5, nome: "Mesa flexora + stiff com halter (bi-série)", esquema: "", series: 3, repeticoes: "10 + 10", descanso: "60s", biserie: true, equipamento: "Mesa flexora + halter", cadencia: "", intensidade: "", grupoMuscular: "Posterior de coxa", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 6, nome: "Cross com perna cruzada", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Polia (cross)", cadencia: "", intensidade: "", grupoMuscular: "Glúteo", execucao: "", errosComuns: "", objetivo: "" }
       ],
-      cardio: {
-        equipamento: "Esteira (caminhada inclinada) ou bike",
-        tempo: "15-20 min",
-        intensidade: "moderada (RPE 5-6/10, consegue conversar com esforço)",
-        objetivo: "Aumentar gasto calórico total sem comprometer recuperação muscular"
-      },
+      cardio: null,
       progressao:
-        "Quando conseguir realizar todas as séries no limite superior de repetições com boa técnica por 2 treinos seguidos, aumente a carga em 2,5-5kg no exercício principal (agachamento)."
+        "Progredir a carga quando conseguir completar todas as séries com boa amplitude. Descanso: 50 s (normal) / 60 s (bi-série)."
     },
 
     terca: {
       diaSemana: "terca",
       label: "Terça-feira",
       tipo: "treino",
-      nome: "Costas, Peito, Ombros, Bíceps, Tríceps, Abdômen",
-      grupos: ["Costas", "Peito", "Ombros", "Bíceps", "Tríceps", "Abdômen"],
+      nome: "Upper",
+      grupos: ["Costas", "Ombros", "Superiores"],
       objetivoDia: "",
       observacaoDia:
-        "Esse é um dia mais longo, com upper body completo. Ênfase extra em dorsais e puxadas, já que há uma leve projeção de ombros/cabeça para frente — fortalecer as costas ajuda diretamente na postura.",
-      aquecimento: {
-        equipamento: "Bike ergométrica ou remo ergômetro",
-        tempo: "5-7 min",
-        intensidade: "leve (RPE 4/10), seguido de 2-3 min de mobilidade de ombro (rotações, elevações com bastão ou elástico)"
-      },
+        "Descanso entre séries: 50 s (série normal) / 60 s (bi-série). Progredir carga com amplitude; alongar e fazer mobilidade quando puder.",
+      aquecimento: { equipamento: "Mobilidade", tempo: "5 min", intensidade: "" },
       exercicios: [
-        {
-          ordem: 1,
-          nome: "Puxada frontal na polia (pegada aberta)",
-          equipamento: "Polia alta com barra reta",
-          series: 4,
-          repeticoes: "10-12",
-          descanso: "90s",
-          cadencia: "2-1-2-0 (2s puxando, 1s contração, 2s soltando)",
-          intensidade: "moderada-alta (RPE 7-8/10 nas últimas séries)",
-          grupoMuscular: "Latíssimo do dorso, redondo maior, bíceps auxiliar",
-          execucao: "Puxar a barra em direção à parte superior do peito, cotovelos apontando para baixo e levemente para trás, evitar jogar o corpo para trás.",
-          errosComuns: "Puxar atrás da nuca (risco para ombro); usar impulso do tronco em vez de força das costas.",
-          objetivo: "Exercício prioritário do dia — ativa fortemente o dorsal, essencial para melhora postural e \"efeito V\" nas costas."
-        },
-        {
-          ordem: 2,
-          nome: "Remada curvada com barra",
-          equipamento: "Barra + anilhas",
-          series: 4,
-          repeticoes: "8-10",
-          descanso: "90s",
-          cadencia: "2-1-2-0",
-          intensidade: "moderada-alta",
-          grupoMuscular: "Dorsal, trapézio médio, romboides, bíceps auxiliar",
-          execucao: "Tronco inclinado ~45°, lombar neutra (não arredondar), puxar a barra em direção ao umbigo.",
-          errosComuns: "Arredondar a lombar (grande risco de lesão); usar as pernas para \"chicotear\" o peso.",
-          objetivo: "Fortalece a musculatura que sustenta a postura ereta — prioridade para o caso."
-        },
-        {
-          ordem: 3,
-          nome: "Supino reto com halteres",
-          equipamento: "Banco + halteres",
-          series: 3,
-          repeticoes: "10-12",
-          descanso: "75s",
-          cadencia: "2-0-2-0",
-          intensidade: "moderada",
-          grupoMuscular: "Peitoral maior, tríceps, deltoide anterior",
-          execucao: "Halteres descem até a altura do peito com cotovelo em ~45° do corpo (não 90°), controle na descida.",
-          errosComuns: "Descer rápido demais e \"quicar\" o peso; arquear demais a lombar.",
-          objetivo: "Desenvolvimento de peitoral com maior amplitude e menor sobrecarga no ombro que a barra."
-        },
-        {
-          ordem: 4,
-          nome: "Desenvolvimento de ombros com halteres (sentado)",
-          equipamento: "Banco com encosto + halteres",
-          series: 3,
-          repeticoes: "10-12",
-          descanso: "75s",
-          cadencia: "2-0-2-0",
-          intensidade: "moderada",
-          grupoMuscular: "Deltoide anterior e lateral, trapézio",
-          execucao: "Halteres iniciam na altura das orelhas, subir sem travar cotovelo no topo.",
-          errosComuns: "Arquear a lombar para empurrar o peso; amplitude incompleta.",
-          objetivo: "Fortalece ombros de forma segura, importante para postura e simetria superior."
-        },
-        {
-          ordem: 5,
-          nome: "Elevação lateral",
-          equipamento: "Halteres",
-          series: 3,
-          repeticoes: "15",
-          descanso: "60s",
-          cadencia: "2-1-2-0",
-          intensidade: "moderada (foco em controle, não em carga)",
-          grupoMuscular: "Deltoide lateral (isolado)",
-          execucao: "Leve flexão de cotovelo, subir até a linha dos ombros, sem usar impulso do tronco.",
-          errosComuns: "Usar peso excessivo e \"balançar\" o corpo; subir acima da linha dos ombros.",
-          objetivo: "Isolamento para dar largura visual aos ombros."
-        },
-        {
-          ordem: 6,
-          nome: "Rosca direta com barra",
-          equipamento: "Barra reta ou W + anilhas",
-          series: 3,
-          repeticoes: "10-12",
-          descanso: "60s",
-          cadencia: "2-0-2-0",
-          intensidade: "moderada",
-          grupoMuscular: "Bíceps braquial",
-          execucao: "Cotovelos fixos ao lado do corpo, subir sem balançar o tronco.",
-          errosComuns: "Usar impulso do quadril; amplitude incompleta.",
-          objetivo: "Isolamento de bíceps, finalização do estímulo de puxada."
-        },
-        {
-          ordem: 7,
-          nome: "Tríceps na polia (pegada pronada)",
-          equipamento: "Polia alta com barra reta ou corda",
-          series: 3,
-          repeticoes: "12-15",
-          descanso: "60s",
-          cadencia: "2-0-2-0",
-          intensidade: "moderada",
-          grupoMuscular: "Tríceps (as três cabeças)",
-          execucao: "Cotovelos fixos junto ao corpo, extensão completa do braço, sem \"abrir\" o cotovelo.",
-          errosComuns: "Usar o tronco para empurrar a barra; cotovelo se afastando do corpo.",
-          objetivo: "Isolamento de tríceps, finalização do estímulo de empurrar."
-        },
-        {
-          ordem: 8,
-          nome: "Abdômen (prancha + elevação de pernas)",
-          equipamento: "Colchonete",
-          series: 3,
-          repeticoes: "prancha 30-45s / elevação de pernas 15 reps",
-          descanso: "45s",
-          cadencia: "",
-          intensidade: "moderada",
-          grupoMuscular: "Core (reto abdominal, transverso, oblíquos)",
-          execucao: "Prancha com quadril alinhado (nem subir nem afundar); elevação de pernas com lombar apoiada no chão.",
-          errosComuns: "Prender a respiração na prancha; usar impulso na elevação de pernas.",
-          objetivo: "Fortalecimento de core, que ajuda tanto na estabilidade dos exercícios compostos quanto na postura."
-        }
+        { ordem: 1, nome: "Puxador aberto + puxador fechado (bi-série)", esquema: "", series: 3, repeticoes: "10 + 10", descanso: "60s", biserie: true, equipamento: "Polia alta", cadencia: "", intensidade: "", grupoMuscular: "Dorsal", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 2, nome: "Remada unilateral na máquina", esquema: "", series: 3, repeticoes: "12", descanso: "50s", biserie: false, equipamento: "Máquina", cadencia: "", intensidade: "", grupoMuscular: "Dorsal", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 3, nome: "Elevação lateral + elevação frontal com halter (bi-série)", esquema: "", series: 4, repeticoes: "10 + 10", descanso: "60s", biserie: true, equipamento: "Halteres", cadencia: "", intensidade: "", grupoMuscular: "Ombros", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 4, nome: "Elevação frontal com anilha", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Anilha", cadencia: "", intensidade: "", grupoMuscular: "Deltoide anterior", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 5, nome: "Desenvolvimento Arnold", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Halteres", cadencia: "", intensidade: "", grupoMuscular: "Ombros", execucao: "", errosComuns: "", objetivo: "" }
       ],
-      cardio: null,
-      progressao: ""
+      cardio: { equipamento: "Escada", tempo: "15 min", intensidade: "", objetivo: "" },
+      progressao:
+        "Progredir a carga com boa amplitude. Descanso: 50 s (normal) / 60 s (bi-série)."
     },
 
     quarta: {
       diaSemana: "quarta",
       label: "Quarta-feira",
       tipo: "treino",
-      nome: "Posteriores, Glúteos, Panturrilha + Cardio",
-      grupos: ["Posteriores", "Glúteos", "Panturrilha"],
+      nome: "Quadríceps completo",
+      grupos: ["Quadríceps"],
       objetivoDia: "",
       observacaoDia:
-        "Esse é um dos dias mais importantes para o objetivo — glúteos foi identificado como ponto de excelente potencial de desenvolvimento nas fotos, então vamos explorar bem esse grupo aqui e reforçar na sexta também.",
-      aquecimento: {
-        equipamento: "Bike ergométrica ou step",
-        tempo: "5-7 min",
-        intensidade: "leve (RPE 4/10), seguido de ativação de glúteo com elástico (mini band) — 2 séries de 15 caminhadas laterais, para \"acordar\" o glúteo antes da carga"
-      },
+        "Descanso entre séries: 50 s (série normal) / 60 s (bi-série). Progredir carga com amplitude; alongar e fazer mobilidade quando puder.",
+      aquecimento: { equipamento: "Mobilidade", tempo: "5 min", intensidade: "" },
       exercicios: [
-        {
-          ordem: 1,
-          nome: "Stiff com barra",
-          equipamento: "Barra + anilhas",
-          series: 4,
-          repeticoes: "8-10",
-          descanso: "90s",
-          cadencia: "3-1-1-0 (3s descendo controlado, 1s pausa no alongamento, 1s subindo)",
-          intensidade: "moderada-alta (RPE 7-8/10)",
-          grupoMuscular: "Posterior de coxa (isquiotibiais) e glúteo (função de extensão de quadril)",
-          execucao: "Joelhos levemente flexionados (fixos), quadril \"empurra\" para trás, barra desliza próxima às pernas, lombar sempre neutra.",
-          errosComuns: "Arredondar a lombar; flexionar o joelho como se fosse agachamento (vira outro exercício).",
-          objetivo: "Exercício prioritário do dia — maior ativação de posterior de coxa e um dos melhores para alongamento sob carga (excelente estímulo de hipertrofia)."
-        },
-        {
-          ordem: 2,
-          nome: "Elevação pélvica com barra (hip thrust)",
-          equipamento: "Banco + barra + anilhas (e almofada de proteção)",
-          series: 4,
-          repeticoes: "10-12",
-          descanso: "90s",
-          cadencia: "2-1-2-0 (segurar 1s no topo com contração máxima)",
-          intensidade: "moderada-alta",
-          grupoMuscular: "Glúteo máximo (isolamento direto)",
-          execucao: "Costas apoiadas no banco na altura da escápula, subir até quadril totalmente estendido, contrair glúteo forte no topo, queixo levemente recolhido.",
-          errosComuns: "Hiperextender a lombar no topo (compensação); não subir até extensão completa.",
-          objetivo: "Exercício com maior evidência científica para hipertrofia de glúteo — prioridade alta considerando o objetivo e potencial de desenvolvimento nessa região."
-        },
-        {
-          ordem: 3,
-          nome: "Cadeira flexora (posterior)",
-          equipamento: "Máquina flexora (sentada ou deitada)",
-          series: 3,
-          repeticoes: "12-15",
-          descanso: "75s",
-          cadencia: "2-1-2-0",
-          intensidade: "moderada",
-          grupoMuscular: "Isquiotibiais (isolamento)",
-          execucao: "Quadril fixo no banco, flexão completa do joelho, controle na volta.",
-          errosComuns: "Tirar o quadril do encosto para \"roubar\" o movimento.",
-          objetivo: "Complementa o stiff com estímulo de isolamento, garantindo volume adequado para o grupo."
-        },
-        {
-          ordem: 4,
-          nome: "Agachamento sumô com halter ou kettlebell",
-          equipamento: "Halter ou kettlebell",
-          series: 3,
-          repeticoes: "12-15",
-          descanso: "75s",
-          cadencia: "2-1-2-0",
-          intensidade: "moderada",
-          grupoMuscular: "Glúteo, adutores, quadríceps (ênfase em glúteo pela postura mais aberta)",
-          execucao: "Pés bem afastados, pontas levemente para fora, descer mantendo joelho na linha do pé, tronco ereto.",
-          errosComuns: "Joelho ultrapassando muito a ponta do pé sem necessidade; perder a verticalidade do tronco.",
-          objetivo: "Variação de agachamento com maior ênfase em glúteo e adutor, complementando o trabalho de quadríceps já feito na segunda."
-        },
-        {
-          ordem: 5,
-          nome: "Cadeira abdutora",
-          equipamento: "Máquina abdutora",
-          series: 3,
-          repeticoes: "15-20",
-          descanso: "60s",
-          cadencia: "2-1-2-0 (segurar 1s na abertura máxima)",
-          intensidade: "moderada",
-          grupoMuscular: "Glúteo médio (importante para estabilidade de quadril e \"formato\" lateral do glúteo)",
-          execucao: "Tronco ereto, movimento controlado, sem usar impulso.",
-          errosComuns: "Fazer o movimento rápido demais, perdendo a tensão muscular.",
-          objetivo: "Isolamento de glúteo médio, região que dá formato lateral e ajuda na estabilidade do quadril durante caminhada e outros exercícios."
-        },
-        {
-          ordem: 6,
-          nome: "Panturrilha sentada",
-          equipamento: "Máquina de panturrilha sentada",
-          series: 4,
-          repeticoes: "15-20",
-          descanso: "45s",
-          cadencia: "1-1-2-0 (pausa no alongamento embaixo)",
-          intensidade: "moderada",
-          grupoMuscular: "Sóleo (musculatura profunda da panturrilha, diferente do gastrocnêmio trabalhado em pé na segunda)",
-          execucao: "Amplitude completa, sem \"quicar\" o peso.",
-          errosComuns: "Amplitude curta, tirar a velocidade do movimento.",
-          objetivo: "Complementar o estímulo de panturrilha já feito na segunda, trabalhando a musculatura em ângulo diferente (joelho flexionado)."
-        }
+        { ordem: 1, nome: "Cadeira extensora unilateral", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Máquina extensora", cadencia: "", intensidade: "", grupoMuscular: "Quadríceps", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 2, nome: "Agachamento no smith", esquema: "", series: 4, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Smith", cadencia: "", intensidade: "", grupoMuscular: "Quadríceps, glúteo", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 3, nome: "Leg press 45° — pés juntos + pés afastados (bi-série)", esquema: "", series: 4, repeticoes: "10 + 10", descanso: "60s", biserie: true, equipamento: "Leg press 45°", cadencia: "", intensidade: "", grupoMuscular: "Quadríceps", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 4, nome: "Cadeira adutora", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Máquina adutora", cadencia: "", intensidade: "", grupoMuscular: "Adutores", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 5, nome: "Cadeira extensora", esquema: "1x20 + 4x15", series: null, repeticoes: "1x20 + 4x15", descanso: "50s", biserie: false, equipamento: "Máquina extensora", cadencia: "", intensidade: "", grupoMuscular: "Quadríceps", execucao: "", errosComuns: "", objetivo: "" }
       ],
-      cardio: {
-        equipamento: "Esteira (caminhada inclinada) ou elíptico",
-        tempo: "15-20 min",
-        intensidade: "moderada (RPE 5-6/10)",
-        objetivo: "Gasto calórico adicional sem comprometer a recuperação da musculatura trabalhada hoje"
-      },
-      progressao: ""
+      cardio: null,
+      progressao:
+        "Progredir a carga com boa amplitude. Descanso: 50 s (normal) / 60 s (bi-série)."
     },
 
     quinta: {
       diaSemana: "quinta",
       label: "Quinta-feira",
-      tipo: "descanso",
-      nome: "Descanso"
+      tipo: "treino",
+      nome: "Upper",
+      grupos: ["Bíceps", "Tríceps", "Ombros"],
+      objetivoDia: "",
+      observacaoDia:
+        "Descanso entre séries: 50 s (série normal) / 60 s (bi-série). Progredir carga com amplitude; alongar e fazer mobilidade quando puder.",
+      aquecimento: { equipamento: "Mobilidade", tempo: "5 min", intensidade: "" },
+      exercicios: [
+        { ordem: 1, nome: "Rosca alternada com halter", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Halteres", cadencia: "", intensidade: "", grupoMuscular: "Bíceps", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 2, nome: "Rosca direta com barra", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Barra", cadencia: "", intensidade: "", grupoMuscular: "Bíceps", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 3, nome: "Tríceps francês", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Halter / barra", cadencia: "", intensidade: "", grupoMuscular: "Tríceps", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 4, nome: "Tríceps corda", esquema: "", series: 3, repeticoes: "20", descanso: "50s", biserie: false, equipamento: "Polia + corda", cadencia: "", intensidade: "", grupoMuscular: "Tríceps", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 5, nome: "Elevação lateral com halter", esquema: "", series: 3, repeticoes: "12", descanso: "50s", biserie: false, equipamento: "Halteres", cadencia: "", intensidade: "", grupoMuscular: "Deltoide lateral", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 6, nome: "Desenvolvimento com halter", esquema: "", series: 3, repeticoes: "12", descanso: "50s", biserie: false, equipamento: "Halteres", cadencia: "", intensidade: "", grupoMuscular: "Ombros", execucao: "", errosComuns: "", objetivo: "" }
+      ],
+      cardio: { equipamento: "Escada", tempo: "15 min", intensidade: "", objetivo: "" },
+      progressao:
+        "Progredir a carga com boa amplitude. Descanso: 50 s (normal) / 60 s (bi-série)."
     },
 
     sexta: {
       diaSemana: "sexta",
       label: "Sexta-feira",
       tipo: "treino",
-      nome: "Glúteos (ênfase), Quadríceps, Posteriores, Abdômen",
-      grupos: ["Glúteos", "Quadríceps", "Posteriores", "Abdômen"],
+      nome: "Glúteo + Posterior completo",
+      grupos: ["Glúteo", "Posterior"],
       objetivoDia: "",
       observacaoDia:
-        "Segundo dia de glúteo na semana — junto com quarta, garante o volume necessário para desenvolver essa região, que é o ponto de maior potencial. A ordem dos exercícios muda: começa por glúteo (prioridade máxima, mais energia disponível no início do treino) e depois complementa quadríceps e posterior.",
-      aquecimento: {
-        equipamento: "Bike ergométrica ou step",
-        tempo: "5-7 min",
-        intensidade: "leve (RPE 4/10), seguido de ativação de glúteo com elástico — 2 séries de 15 caminhadas laterais + 10 elevações de quadril no chão sem carga"
-      },
+        "Mesmo treino de segunda. Descanso entre séries: 50 s (série normal) / 60 s (bi-série). Progredir carga com amplitude; alongar e fazer mobilidade quando puder.",
+      aquecimento: { equipamento: "Mobilidade", tempo: "5 min", intensidade: "" },
       exercicios: [
-        {
-          ordem: 1,
-          nome: "Elevação pélvica com barra (hip thrust) — variação unilateral progressiva",
-          equipamento: "Banco + barra + anilhas",
-          series: 4,
-          repeticoes: "8-10",
-          descanso: "90-120s",
-          cadencia: "2-1-2-0",
-          intensidade: "alta (RPE 8/10 — pode usar carga mais pesada que na quarta, já que é o primeiro exercício com energia total)",
-          grupoMuscular: "Glúteo máximo",
-          execucao: "Mesma técnica de quarta — costas na altura da escápula no banco, subir com extensão completa de quadril, contração forte no topo.",
-          errosComuns: "Hiperextensão lombar; perder o apoio correto da barra no quadril (usar almofada sempre).",
-          objetivo: "Repetir o exercício de maior evidência para glúteo, agora com prioridade de carga por ser o primeiro do treino — essencial para progressão consistente."
-        },
-        {
-          ordem: 2,
-          nome: "Agachamento búlgaro (afundo com apoio traseiro)",
-          equipamento: "Banco + halteres",
-          series: 3,
-          repeticoes: "10-12 por perna",
-          descanso: "90s",
-          cadencia: "2-1-2-0",
-          intensidade: "moderada-alta",
-          grupoMuscular: "Glúteo, quadríceps (unilateral — ajuda a corrigir eventuais assimetrias entre os lados)",
-          execucao: "Pé de trás apoiado no banco, tronco levemente inclinado à frente (mais inclinação = mais glúteo), descer até quase tocar o joelho de trás no chão.",
-          errosComuns: "Dar passo curto demais (perde amplitude); joelho da frente ultrapassando muito a ponta do pé de forma instável.",
-          objetivo: "Excelente para glúteo com componente unilateral, trabalha estabilidade e força ao mesmo tempo."
-        },
-        {
-          ordem: 3,
-          nome: "Leg press 45° (pés altos e afastados)",
-          equipamento: "Máquina leg press",
-          series: 3,
-          repeticoes: "12-15",
-          descanso: "75s",
-          cadencia: "2-0-1-0",
-          intensidade: "moderada",
-          grupoMuscular: "Glúteo e posterior (a posição dos pés mais alta na plataforma desloca ênfase do quadríceps para glúteo/posterior)",
-          execucao: "Pés na parte superior da plataforma, afastados na largura do quadril, não travar joelho na extensão.",
-          errosComuns: "Descer demais tirando o quadril do encosto.",
-          objetivo: "Variação de leg press com foco em glúteo/posterior, complementando o hip thrust e o búlgaro sem sobrecarregar ainda mais a lombar."
-        },
-        {
-          ordem: 4,
-          nome: "Stiff unilateral com halter",
-          equipamento: "Halteres",
-          series: 3,
-          repeticoes: "10-12 por perna",
-          descanso: "75s",
-          cadencia: "3-1-1-0",
-          intensidade: "moderada",
-          grupoMuscular: "Posterior de coxa e glúteo (com forte componente de equilíbrio e estabilidade)",
-          execucao: "Apoio em uma perna, tronco e perna de trás formam uma linha reta ao inclinar, halter desce próximo à perna de apoio.",
-          errosComuns: "Perder o equilíbrio e compensar com rotação de quadril; arredondar a lombar.",
-          objetivo: "Variação unilateral do stiff, trabalha estabilidade além de força — importante para prevenir desequilíbrios musculares entre os lados."
-        },
-        {
-          ordem: 5,
-          nome: "Cadeira extensora",
-          equipamento: "Máquina extensora",
-          series: 3,
-          repeticoes: "15",
-          descanso: "60s",
-          cadencia: "2-1-2-0",
-          intensidade: "moderada",
-          grupoMuscular: "Quadríceps (isolamento)",
-          execucao: "Contração total no topo, controle na descida.",
-          errosComuns: "",
-          objetivo: "Volume complementar de quadríceps, já que o foco principal do dia foi glúteo/posterior."
-        },
-        {
-          ordem: 6,
-          nome: "Abdômen (elevação de quadril + prancha lateral)",
-          equipamento: "Colchonete",
-          series: 3,
-          repeticoes: "elevação de quadril 15-20 reps / prancha lateral 20-30s por lado",
-          descanso: "45s",
-          cadencia: "",
-          intensidade: "moderada",
-          grupoMuscular: "Core, reto abdominal inferior, oblíquos",
-          execucao: "Na elevação de quadril, subir o quadril do chão contraindo abdômen inferior, sem impulso; na prancha lateral, quadril alinhado sem cair.",
-          errosComuns: "Usar impulso das pernas na elevação de quadril.",
-          objetivo: "Fortalecimento de core com ênfase diferente da terça (foco em porção inferior do abdômen e oblíquos)."
-        }
+        { ordem: 1, nome: "Cadeira abdutora", esquema: "1x25 + 3x20", series: null, repeticoes: "1x25 + 3x20", descanso: "50s", biserie: false, equipamento: "", cadencia: "", intensidade: "", grupoMuscular: "Glúteo médio", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 2, nome: "Abdução no cross", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Polia (cross)", cadencia: "", intensidade: "", grupoMuscular: "Glúteo médio", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 3, nome: "Elevação pélvica", esquema: "", series: 4, repeticoes: "20", descanso: "50s", biserie: false, equipamento: "", cadencia: "", intensidade: "", grupoMuscular: "Glúteo máximo", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 4, nome: "Agachamento sumô com halter", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Halter", cadencia: "", intensidade: "", grupoMuscular: "Glúteo, adutores", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 5, nome: "Mesa flexora + stiff com halter (bi-série)", esquema: "", series: 3, repeticoes: "10 + 10", descanso: "60s", biserie: true, equipamento: "Mesa flexora + halter", cadencia: "", intensidade: "", grupoMuscular: "Posterior de coxa", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 6, nome: "Cross com perna cruzada", esquema: "", series: 3, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "Polia (cross)", cadencia: "", intensidade: "", grupoMuscular: "Glúteo", execucao: "", errosComuns: "", objetivo: "" }
       ],
       cardio: null,
-      progressao: ""
+      progressao:
+        "Progredir a carga com boa amplitude. Descanso: 50 s (normal) / 60 s (bi-série)."
     },
 
     sabado: {
       diaSemana: "sabado",
       label: "Sábado",
       tipo: "treino",
-      nome: "Costas, Ombros, Braços, Abdômen + Cardio",
-      grupos: ["Costas", "Ombros", "Braços", "Abdômen"],
+      nome: "Abdômen",
+      grupos: ["Abdômen"],
       objetivoDia: "",
       observacaoDia:
-        "Fechando a semana reforçando upper body — esse segundo dia de costas/ombros na semana é importante para consolidar o trabalho postural iniciado na terça, além de dar volume extra para braços.",
-      aquecimento: {
-        equipamento: "Bike ergométrica ou remo ergômetro",
-        tempo: "5-7 min",
-        intensidade: "leve (RPE 4/10), seguido de mobilidade de ombro com elástico (rotação externa/interna, 2x15 cada lado)"
-      },
+        "Descanso entre séries: 50 s. Progredir com amplitude; alongar e fazer mobilidade quando puder.",
+      aquecimento: null,
       exercicios: [
-        {
-          ordem: 1,
-          nome: "Remada baixa na polia (pegada neutra)",
-          equipamento: "Polia baixa + triângulo",
-          series: 4,
-          repeticoes: "10-12",
-          descanso: "90s",
-          cadencia: "2-1-2-0",
-          intensidade: "moderada-alta (RPE 7-8/10)",
-          grupoMuscular: "Dorsal, trapézio médio, romboides",
-          execucao: "Tronco ereto (leve inclinação para trás é normal), puxar o triângulo em direção ao abdômen, cotovelos passando próximos ao corpo.",
-          errosComuns: "Usar impulso do tronco (efeito \"gangorra\"); arredondar as costas no início do movimento.",
-          objetivo: "Exercício prioritário do dia — reforça o trabalho de dorsal iniciado na terça, essencial para a postura."
-        },
-        {
-          ordem: 2,
-          nome: "Puxada na polia com pegada supinada",
-          equipamento: "Polia alta + barra reta",
-          series: 3,
-          repeticoes: "10-12",
-          descanso: "90s",
-          cadencia: "2-1-2-0",
-          intensidade: "moderada-alta",
-          grupoMuscular: "Dorsal (ênfase na porção inferior) + bíceps auxiliar",
-          execucao: "Puxar em direção ao peito, cotovelos descendo próximos ao corpo, evitar balançar o tronco.",
-          errosComuns: "Usar pegada muito fechada sem necessidade; puxar com o corpo em vez das costas.",
-          objetivo: "Variação de puxada com pegada supinada, que recruta mais bíceps junto e trabalha o dorsal em ângulo levemente diferente da terça."
-        },
-        {
-          ordem: 3,
-          nome: "Desenvolvimento militar com barra (em pé ou sentado)",
-          equipamento: "Barra + rack (ou smith)",
-          series: 3,
-          repeticoes: "8-10",
-          descanso: "90s",
-          cadencia: "2-0-2-0",
-          intensidade: "moderada-alta",
-          grupoMuscular: "Deltoide anterior, trapézio, core (estabilização se feito em pé)",
-          execucao: "Barra parte da altura dos ombros, sobe em linha reta sem hiperestender a lombar.",
-          errosComuns: "Arquear excessivamente as costas para \"ajudar\" a subir o peso.",
-          objetivo: "Exercício composto de ombro, complementa o desenvolvimento com halteres feito na terça com padrão de movimento diferente."
-        },
-        {
-          ordem: 4,
-          nome: "Elevação posterior (crucifixo invertido)",
-          equipamento: "Halteres ou peck deck invertido",
-          series: 3,
-          repeticoes: "15",
-          descanso: "60s",
-          cadencia: "2-1-2-0",
-          intensidade: "moderada",
-          grupoMuscular: "Deltoide posterior, trapézio médio",
-          execucao: "Tronco inclinado à frente (ou sentado no peck deck), abrir os braços em arco, contraindo entre as escápulas no topo.",
-          errosComuns: "Usar peso excessivo e perder amplitude; balançar o tronco para gerar impulso.",
-          objetivo: "Exercício-chave para a postura — deltoide posterior é frequentemente fraco em quem tem ombros projetados para frente; fortalecer aqui ajuda diretamente a \"puxar\" os ombros para trás."
-        },
-        {
-          ordem: 5,
-          nome: "Rosca alternada com halteres",
-          equipamento: "Halteres",
-          series: 3,
-          repeticoes: "10-12 por braço",
-          descanso: "60s",
-          cadencia: "2-0-2-0",
-          intensidade: "moderada",
-          grupoMuscular: "Bíceps braquial",
-          execucao: "Cotovelo fixo ao lado do corpo, girar o punho durante a subida (supinação), controle total na descida.",
-          errosComuns: "Balançar o tronco para completar a repetição.",
-          objetivo: "Variação de bíceps diferente da barra usada na terça, maior amplitude por trabalhar cada braço isoladamente."
-        },
-        {
-          ordem: 6,
-          nome: "Tríceps testa com barra W",
-          equipamento: "Banco + barra W",
-          series: 3,
-          repeticoes: "10-12",
-          descanso: "60s",
-          cadencia: "2-0-2-0",
-          intensidade: "moderada",
-          grupoMuscular: "Tríceps (cabeça longa, principalmente)",
-          execucao: "Deitado, cotovelos fixos apontando para o teto, descer a barra em direção à testa com controle.",
-          errosComuns: "Abrir os cotovelos durante o movimento; descer rápido demais (risco para cotovelo).",
-          objetivo: "Complementa o tríceps na polia feito na terça, com maior ênfase na cabeça longa do músculo."
-        },
-        {
-          ordem: 7,
-          nome: "Abdômen (bicicleta + prancha)",
-          equipamento: "Colchonete",
-          series: 3,
-          repeticoes: "bicicleta 20 reps (10 por lado) / prancha 30-45s",
-          descanso: "45s",
-          cadencia: "",
-          intensidade: "moderada",
-          grupoMuscular: "Reto abdominal, oblíquos",
-          execucao: "Na bicicleta, cotovelo toca o joelho oposto com rotação de tronco controlada, sem puxar o pescoço.",
-          errosComuns: "Puxar a cabeça com as mãos durante a bicicleta.",
-          objetivo: "Fechamento da semana de abdômen, trabalhando rotação de tronco (diferente da terça e sexta)."
-        }
+        { ordem: 1, nome: "Abdominal infra", esquema: "", series: 4, repeticoes: "12", descanso: "50s", biserie: false, equipamento: "", cadencia: "", intensidade: "", grupoMuscular: "Abdômen inferior", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 2, nome: "Abdominal infra unilateral", esquema: "", series: 4, repeticoes: "15", descanso: "50s", biserie: false, equipamento: "", cadencia: "", intensidade: "", grupoMuscular: "Abdômen inferior, oblíquos", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 3, nome: "Abdominal solo", esquema: "", series: 4, repeticoes: "12", descanso: "50s", biserie: false, equipamento: "Colchonete", cadencia: "", intensidade: "", grupoMuscular: "Reto abdominal", execucao: "", errosComuns: "", objetivo: "" },
+        { ordem: 4, nome: "Prancha isométrica", esquema: "3x 1 min", series: 3, repeticoes: "1 min", descanso: "50s", biserie: false, equipamento: "Colchonete", cadencia: "", intensidade: "", grupoMuscular: "Core", execucao: "", errosComuns: "", objetivo: "" }
       ],
-      cardio: {
-        equipamento: "Esteira, elíptico ou bike",
-        tempo: "15-20 min",
-        intensidade: "moderada (RPE 5-6/10)",
-        objetivo: "Gasto calórico adicional, fechando a semana com 3 sessões de cardio (segunda, quarta, sábado)"
-      },
-      progressao: ""
+      cardio: { equipamento: "Escada", tempo: "20 min", intensidade: "", objetivo: "" },
+      progressao: "Progredir com amplitude e controle. Descanso: 50 s."
     },
 
     domingo: {
@@ -789,12 +384,81 @@ const PROTOCOLO = {
   },
 
   resumoSemanal: {
-    volumeGluteo: "2x/semana (quarta e sexta) — adequado para hipertrofia",
-    volumeCostasPostura: "2x/semana (terça e sábado) — trabalha diretamente a projeção de ombros observada nas fotos",
-    cardio: "3x/semana (segunda, quarta, sábado) — moderado, sem exagero",
-    deficitCalorico: "~17%, com proteína alta para preservar massa magra"
+    volumeGluteo: "2x/semana (segunda e sexta)",
+    volumeUpper: "2x/semana (terça e quinta)",
+    quadriceps: "1x/semana (quarta)",
+    abdomen: "1x/semana (sábado)",
+    cardioEscada: "Terça 15 min, quinta 15 min, sábado 20 min",
+    aej: "30 min de segunda a sábado"
   },
 
+  ordemDiasSemana: ["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"]
+};
+
+/* ================================================================
+ * PROTOCOLO_LEGADO — plano anterior ("Treino VV.docx")
+ * Usado somente para calcular o "previsto" de datas anteriores ao
+ * início da Fase 1. Mantido compacto (sem a prosa de execução).
+ * ================================================================ */
+const PROTOCOLO_LEGADO = {
+  versao: "1.0",
+  fase: { id: "legado", nome: "Plano anterior", fonte: "Treino VV.docx" },
+  agua: { metaMlPadrao: 2350 },
+  gastoEnergetico: { metaCaloricaKcal: 1780 },
+  macros: { proteina: { quantidadeG: 148 }, carboidrato: { quantidadeG: 150 }, gordura: { quantidadeG: 65 } },
+  refeicoes: [
+    { id: "cafe_manha", ordem: 1, nome: "Café da manhã" },
+    { id: "almoco", ordem: 2, nome: "Almoço" },
+    { id: "cafe_tarde", ordem: 3, nome: "Café da tarde (pré-treino)" },
+    { id: "jantar", ordem: 4, nome: "Jantar (pós-treino)" }
+  ],
+  treinos: {
+    segunda: { diaSemana: "segunda", label: "Segunda-feira", tipo: "treino", nome: "Quadríceps + Panturrilha + Cardio", grupos: ["Quadríceps", "Panturrilha"], exercicios: [
+      { ordem: 1, nome: "Agachamento livre com barra", series: 4, repeticoes: "8-10", descanso: "90s" },
+      { ordem: 2, nome: "Leg press 45°", series: 3, repeticoes: "12-15", descanso: "75s" },
+      { ordem: 3, nome: "Cadeira extensora", series: 3, repeticoes: "15", descanso: "60s" },
+      { ordem: 4, nome: "Cadeira flexora (posterior, ativação leve)", series: 3, repeticoes: "12", descanso: "60s" },
+      { ordem: 5, nome: "Panturrilha em pé", series: 4, repeticoes: "15-20", descanso: "45s" }
+    ], cardio: { equipamento: "Esteira ou bike", tempo: "15-20 min", intensidade: "", objetivo: "" }, progressao: "" },
+    terca: { diaSemana: "terca", label: "Terça-feira", tipo: "treino", nome: "Costas, Peito, Ombros, Bíceps, Tríceps, Abdômen", grupos: ["Costas", "Peito", "Ombros", "Bíceps", "Tríceps", "Abdômen"], exercicios: [
+      { ordem: 1, nome: "Puxada frontal na polia (pegada aberta)", series: 4, repeticoes: "10-12", descanso: "90s" },
+      { ordem: 2, nome: "Remada curvada com barra", series: 4, repeticoes: "8-10", descanso: "90s" },
+      { ordem: 3, nome: "Supino reto com halteres", series: 3, repeticoes: "10-12", descanso: "75s" },
+      { ordem: 4, nome: "Desenvolvimento de ombros com halteres (sentado)", series: 3, repeticoes: "10-12", descanso: "75s" },
+      { ordem: 5, nome: "Elevação lateral", series: 3, repeticoes: "15", descanso: "60s" },
+      { ordem: 6, nome: "Rosca direta com barra", series: 3, repeticoes: "10-12", descanso: "60s" },
+      { ordem: 7, nome: "Tríceps na polia (pegada pronada)", series: 3, repeticoes: "12-15", descanso: "60s" },
+      { ordem: 8, nome: "Abdômen (prancha + elevação de pernas)", series: 3, repeticoes: "prancha 30-45s / elevação de pernas 15 reps", descanso: "45s" }
+    ], cardio: null, progressao: "" },
+    quarta: { diaSemana: "quarta", label: "Quarta-feira", tipo: "treino", nome: "Posteriores, Glúteos, Panturrilha + Cardio", grupos: ["Posteriores", "Glúteos", "Panturrilha"], exercicios: [
+      { ordem: 1, nome: "Stiff com barra", series: 4, repeticoes: "8-10", descanso: "90s" },
+      { ordem: 2, nome: "Elevação pélvica com barra (hip thrust)", series: 4, repeticoes: "10-12", descanso: "90s" },
+      { ordem: 3, nome: "Cadeira flexora (posterior)", series: 3, repeticoes: "12-15", descanso: "75s" },
+      { ordem: 4, nome: "Agachamento sumô com halter ou kettlebell", series: 3, repeticoes: "12-15", descanso: "75s" },
+      { ordem: 5, nome: "Cadeira abdutora", series: 3, repeticoes: "15-20", descanso: "60s" },
+      { ordem: 6, nome: "Panturrilha sentada", series: 4, repeticoes: "15-20", descanso: "45s" }
+    ], cardio: { equipamento: "Esteira ou elíptico", tempo: "15-20 min", intensidade: "", objetivo: "" }, progressao: "" },
+    quinta: { diaSemana: "quinta", label: "Quinta-feira", tipo: "descanso", nome: "Descanso" },
+    sexta: { diaSemana: "sexta", label: "Sexta-feira", tipo: "treino", nome: "Glúteos (ênfase), Quadríceps, Posteriores, Abdômen", grupos: ["Glúteos", "Quadríceps", "Posteriores", "Abdômen"], exercicios: [
+      { ordem: 1, nome: "Elevação pélvica com barra (hip thrust) — variação unilateral progressiva", series: 4, repeticoes: "8-10", descanso: "90-120s" },
+      { ordem: 2, nome: "Agachamento búlgaro (afundo com apoio traseiro)", series: 3, repeticoes: "10-12 por perna", descanso: "90s" },
+      { ordem: 3, nome: "Leg press 45° (pés altos e afastados)", series: 3, repeticoes: "12-15", descanso: "75s" },
+      { ordem: 4, nome: "Stiff unilateral com halter", series: 3, repeticoes: "10-12 por perna", descanso: "75s" },
+      { ordem: 5, nome: "Cadeira extensora", series: 3, repeticoes: "15", descanso: "60s" },
+      { ordem: 6, nome: "Abdômen (elevação de quadril + prancha lateral)", series: 3, repeticoes: "elevação de quadril 15-20 reps / prancha lateral 20-30s por lado", descanso: "45s" }
+    ], cardio: null, progressao: "" },
+    sabado: { diaSemana: "sabado", label: "Sábado", tipo: "treino", nome: "Costas, Ombros, Braços, Abdômen + Cardio", grupos: ["Costas", "Ombros", "Braços", "Abdômen"], exercicios: [
+      { ordem: 1, nome: "Remada baixa na polia (pegada neutra)", series: 4, repeticoes: "10-12", descanso: "90s" },
+      { ordem: 2, nome: "Puxada na polia com pegada supinada", series: 3, repeticoes: "10-12", descanso: "90s" },
+      { ordem: 3, nome: "Desenvolvimento militar com barra (em pé ou sentado)", series: 3, repeticoes: "8-10", descanso: "90s" },
+      { ordem: 4, nome: "Elevação posterior (crucifixo invertido)", series: 3, repeticoes: "15", descanso: "60s" },
+      { ordem: 5, nome: "Rosca alternada com halteres", series: 3, repeticoes: "10-12 por braço", descanso: "60s" },
+      { ordem: 6, nome: "Tríceps testa com barra W", series: 3, repeticoes: "10-12", descanso: "60s" },
+      { ordem: 7, nome: "Abdômen (bicicleta + prancha)", series: 3, repeticoes: "bicicleta 20 reps / prancha 30-45s", descanso: "45s" }
+    ], cardio: { equipamento: "Esteira, elíptico ou bike", tempo: "15-20 min", intensidade: "", objetivo: "" }, progressao: "" },
+    domingo: { diaSemana: "domingo", label: "Domingo", tipo: "descanso", nome: "Descanso" }
+  },
+  aej: null,
   ordemDiasSemana: ["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"]
 };
 

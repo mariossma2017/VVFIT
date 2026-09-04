@@ -1,130 +1,266 @@
 # VV FIT
 
-Aplicativo pessoal (PWA) de acompanhamento de treino, alimentação e evolução corporal, feito em HTML, CSS e JavaScript puro, sem servidor, sem login e sem mensalidade. Todos os dados ficam salvos apenas no aparelho da usuária.
+Aplicativo pessoal (PWA) de acompanhamento de treino, alimentação e evolução
+corporal, feito em HTML, CSS e JavaScript puro, **sem servidor, sem login e sem
+mensalidade**. Todos os dados ficam salvos **apenas no aparelho da usuária**.
 
-O conteúdo do protocolo (treinos, plano alimentar, macros) foi extraído integralmente do documento **"Treino VV.docx"** e está em [`data.js`](data.js).
+O protocolo vigente é a **Fase 1** da Verônica, transcrito integralmente do
+documento **"Plano Verônica fase 1.pdf" (PROTOCOLO 2026 — Key Araújo)** e
+armazenado em [`data.js`](data.js).
 
-## Versão 2 — registro rápido por botões
-
-A partir da versão 2, o registro diário deixou de exigir preenchimento de carga, repetições, RPE ou quantidades consumidas. Treino e alimentação agora funcionam principalmente com **botões grandes de status** (Feito / Parcial / Não feito, e variações), salvos imediatamente ao toque. Carga, repetições, RPE, horários e observações continuam disponíveis, mas sempre dentro de um painel opcional "Adicionar detalhes" — nunca obrigatórios. Registros feitos na versão 1 (com séries detalhadas) são convertidos automaticamente na primeira abertura do app: nada é apagado, e o detalhamento antigo fica visível dentro de "Adicionar detalhes".
+---
 
 ## 1. Estrutura dos arquivos
 
 ```
-VV FIT/
-├── index.html              → estrutura da página (shell do app)
-├── style.css                → todo o visual (cores, layout, responsividade)
-├── data.js                  → protocolo oficial (fonte: Treino VV.docx) — somente leitura
-├── storage.js                → camada de dados: localStorage (registros) + IndexedDB (fotos)
-├── core.js                   → utilitários, cálculo de adesão, toast, modal, instalação PWA
-├── app.js                    → roteador entre telas e inicialização do app
+VVFIT/
+├── index.html               → shell do app e ordem de carregamento dos scripts
+├── style.css                → identidade visual (roxo/rosa), layout, responsividade
+├── vendor/
+│   └── jspdf.umd.min.js      → jsPDF 2.5.1 (vendorizado — usado só na exportação de PDF)
+├── data.js                  → protocolo:
+│                                • PROTOCOLO        = Fase 1 (plano vigente)
+│                                • PROTOCOLO_LEGADO = plano anterior ("Treino VV.docx"),
+│                                  usado só para o "previsto" de datas antigas
+├── storage.js               → camada de dados: localStorage (registros) + IndexedDB (fotos)
+├── core.js                  → utilitários, Planos (plano vigente por data),
+│                              Adesao (cálculos), migração de dados, toast/modal, PWA
+├── resumo.js                → cálculo do resumo de acompanhamento + geração de PDF (jsPDF)
+├── app.js                   → roteador entre telas e inicialização
 ├── screens/
-│   ├── inicio.js              → tela Início
-│   ├── treino.js              → tela Treino (ficha, execução, cronômetros, histórico)
-│   ├── alimentacao.js         → tela Alimentação (refeições, água)
-│   ├── evolucao.js            → tela Evolução (medidas, gráficos, fotos)
-│   └── perfil.js               → tela Perfil (dados, check-in, calendário, relatórios, backup)
-├── manifest.json             → configuração do PWA (nome, ícones, cores)
-├── service-worker.js         → cache offline e atualização de versão
-├── icon-192.png / icon-512.png            → ícones do app
-├── icon-maskable-192.png / icon-maskable-512.png → ícones adaptativos (Android)
-└── gen_icons.py               → script usado para gerar os ícones (não é necessário no dia a dia)
+│   ├── inicio.js             → tela Início (resumo do dia, atalho para o PDF)
+│   ├── treino.js             → tela Treino (ficha da Fase 1, status por botões,
+│   │                            registro de AEJ e escada, cronômetros, histórico)
+│   ├── alimentacao.js        → tela Alimentação (5 refeições da Fase 1, água)
+│   ├── evolucao.js           → tela Evolução (medidas, sono/disposição, gráficos, fotos)
+│   └── perfil.js             → tela Perfil (dados, fase do plano, suplementação,
+│                                check-in, calendário, RESUMO SEMANAL EM PDF, backup)
+├── manifest.json            → configuração do PWA
+├── service-worker.js        → cache offline e atualização de versão (CACHE_VERSAO)
+├── icon-*.png               → ícones do app
+└── gen_icons.py             → script auxiliar para gerar ícones (não é necessário no dia a dia)
 ```
 
-Não existe backend, banco de dados externo ou build step: são arquivos estáticos que podem ser abertos diretamente por um servidor de arquivos simples.
+Não há backend nem build step. São arquivos estáticos servidos por `http://`.
 
-## 2. Como testar localmente
+---
 
-O app usa `fetch` e Service Worker, que exigem que os arquivos sejam servidos por `http://` (não funciona abrindo o `index.html` direto com duplo clique, protocolo `file://`).
+## 2. Como o app funciona
 
-**Opção mais simples (Python, já costuma vir instalado):**
+### 2.1. Perfil
+O app é de **uso individual**: existe **um** perfil (`vvfit_perfil`), com nome,
+foto, peso atual/meta, altura, horário de treino, meta de água e observações,
+editável em **Perfil → Editar perfil**. O plano em si (treinos e refeições) vive
+no código (`data.js`), não no perfil — não há "planos de outros usuários" neste
+repositório.
+
+### 2.2. Plano da Fase 1 (fonte: PDF)
+- **Alimentação — 5 refeições.** Cada refeição tem **uma composição**. As
+  alternativas com "ou" (ex.: *"100 g peito de frango ou 80 g carne magra"*)
+  são preservadas como **um único item**, nunca somadas.
+- **Suplementação.** Transcrita em **Perfil → Suplementação** como
+  *informativo do plano recebido*, com aviso explícito de que o app **não
+  prescreve, não ajusta doses e não recomenda nada**. Há um campo livre de
+  anotações de consulta.
+- **Hidratação.** Meta de **3 L de água/dia + 500 ml de chá de cavalinha**
+  (chá contabilizado à parte). Orientações do documento (sem açúcar, sem óleo,
+  sal ≤ 6 g/dia) ficam em Perfil → Fase do plano.
+- **Treinos** (segunda a sábado; domingo é descanso):
+  - Segunda e sexta: Glúteo + Posterior completo
+  - Terça: Upper + 15 min de escada
+  - Quarta: Quadríceps completo
+  - Quinta: Upper + 15 min de escada
+  - Sábado: Abdômen + 20 min de escada
+  - **AEJ**: 30 min de segunda a sábado
+  - Descanso entre séries: 50 s (série normal) / 60 s (bi-série)
+- **Sem calorias / macros / horários**: o PDF não traz esses números, então
+  **eles não existem no app** (não foram inventados). Onde faria sentido
+  mostrá-los, aparece a observação de que não constam no documento.
+- **Refeição livre**: 1 por semana, a cada 2 semanas, após avaliação. **Feedback**
+  a cada 2 semanas, em jejum, no sábado ou domingo. Ambos preservados em
+  Perfil → Fase do plano.
+
+### 2.3. Fase do plano e preservação do histórico
+- A Fase 1 tem uma **data de início configurável** em
+  **Perfil → Fase do plano** (`config.faseInicio`).
+- Para qualquer data **anterior** a essa, o "previsto" (treino do dia,
+  nº de refeições) é calculado pelo **plano anterior** (`PROTOCOLO_LEGADO`) —
+  ver `Planos.vigenteEm(iso)` em `core.js`.
+- Se a data ficar **em branco**, a Fase 1 vale para todas as datas.
+- Sessões de treino registradas **antes** da data de início **não recebem** os
+  exercícios da Fase 1 (o histórico fica exatamente como foi registrado).
+
+### 2.4. Registro de acompanhamento
+- **Treino**: status por exercício e status geral (Feito / Parcial / Não feito),
+  salvos ao toque. Carga, repetições, RPE e observações são **sempre opcionais**
+  (painel "Adicionar detalhes").
+- **AEJ e escada**: registrados **separadamente**, por data, com **duração em
+  minutos** (tela Treino, bloco "AEJ e escada — hoje").
+- **Refeições**: Feito / Feito com substituição / Parcial / Não feito.
+- **Água**: em ml (atalhos 200/300/500 + valor personalizado).
+- **Peso e medidas**: tela Evolução.
+- **Sono e disposição**: opcionais, na tela Evolução (registro diário de
+  bem-estar, à parte das medidas).
+- **"Não realizado" ≠ "não informado"**: campo vazio **nunca** vira zero nem
+  descumprimento. Dia de treino passado sem registro conta como
+  *"não informado"* e fica **de fora** do cálculo de adesão.
+
+---
+
+## 3. Onde os dados ficam salvos
+
+| Dado | Local | Chave |
+|---|---|---|
+| Perfil, configurações | `localStorage` | `vvfit_perfil`, `vvfit_config` |
+| Treinos | `localStorage` | `vvfit_treinos` |
+| Refeições, água | `localStorage` | `vvfit_alimentacao`, `vvfit_agua` |
+| **AEJ e escada** | `localStorage` | `vvfit_cardio` |
+| **Sono e disposição** | `localStorage` | `vvfit_bemestar` |
+| Medidas, check-ins | `localStorage` | `vvfit_evolucao`, `vvfit_checkins` |
+| Fotos (binário) | `IndexedDB` | banco `vvfit_photos_db` |
+| Versão do formato | `localStorage` | `vvfit_versaoDados` |
+
+**Nada sai do aparelho.** Backup/restauração manual em **Perfil → Configurações
+→ Exportar/Importar backup completo (JSON)** (inclui `cardio` e `bemestar`).
+Também há exportação por categoria em **CSV**.
+
+### Migração de dados
+`core.js → Migracao` versiona o formato dos registros. A migração é sempre
+**aditiva**: nenhum registro é apagado, remapeado ou zerado.
+- **v1 → v2**: registro simplificado por botões (séries antigas viram
+  `seriesLegado`, visíveis em "Adicionar detalhes").
+- **v2 → v3** (Fase 1): apenas define `config.faseInicio` (padrão: data da
+  primeira abertura após a atualização, se já houver histórico; editável em
+  Perfil). Registros de refeição antigos mantêm o `refeicaoId` original
+  (café/almoço/…) e continuam contando no histórico e nos relatórios.
+
+---
+
+## 4. Resumo semanal em PDF
+
+Botão em **Perfil → Resumo semanal em PDF** (e atalho na tela Início).
+
+**Períodos**: Semana (segunda a domingo) · Últimos 14 dias (feedback quinzenal)
+· Personalizado.
+
+**Conteúdo** (só seções com dados aparecem; alvo de 1–2 páginas):
+nome, fase, período e data de geração; treinos previstos × realizados e
+resumo por dia; adesão de treino e alimentar **com os critérios à vista**;
+AEJ e escada (sessões e minutos, separados); hidratação média dos dias
+preenchidos; peso inicial/final com datas e variação (ou "não informado");
+medidas e variações quando disponíveis; evolução de cargas **só quando há
+registros comparáveis**; sono e disposição quando registrados; observações da
+usuária e pontos para o profissional.
+
+**Regras**: períodos em andamento **não** contam dias futuros como falta; usa o
+**plano vigente em cada data**; **não** inventa evolução, **não** estima perda de
+gordura, **não** faz diagnóstico. Fotos ficam **fora por padrão** (caixa opcional).
+
+**Arquivo**: `VVFIT_Resumo_<Nome>_<AAAA-MM-DD>_a_<AAAA-MM-DD>.pdf`
+(ex.: `VVFIT_Resumo_Veronica_2026-09-07_a_2026-09-13.pdf`).
+
+**Tecnologia**: [jsPDF 2.5.1](vendor/jspdf.umd.min.js), vendorizado (funciona
+offline). As fontes padrão cobrem os acentos do português; símbolos fora do
+Latin-1 (→, ≈) são trocados por equivalentes ASCII antes de escrever no PDF.
+
+### Compartilhar (WhatsApp)
+Botão **"Compartilhar PDF (WhatsApp)"**:
+1. Se o navegador permitir compartilhar **arquivos** (`navigator.canShare({files})`),
+   abre o **compartilhamento nativo** do celular — a pessoa escolhe o WhatsApp e
+   o destinatário.
+2. Se não permitir, o PDF é **baixado** e o app mostra uma orientação curta para
+   anexá-lo manualmente no WhatsApp (Documento → Downloads).
+
+O app **nunca** usa um link `wa.me` como se ele anexasse o PDF, e **nada é
+enviado sem ação da usuária**.
+
+---
+
+## 5. Como testar localmente
+
+Precisa de `http://` (Service Worker + `fetch`).
 
 ```bash
-cd "VV FIT"
+cd VVFIT
 python -m http.server 8080
 ```
 
-Depois abra `http://localhost:8080` no Google Chrome (no computador) ou, se o celular estiver na mesma rede Wi-Fi, `http://SEU_IP_LOCAL:8080`.
+Abra `http://localhost:8080` no Chrome. Sem Python, qualquer servidor estático
+serve (`npx serve`, extensão "Live Server" do VS Code, etc.).
 
-**Alternativa (Node.js):**
+Checklist de teste manual:
+- Abrir com dados de uma versão anterior e conferir que treinos, refeições,
+  água, medidas e check-ins continuam lá após a migração.
+- Fase 1 na tela Alimentação (5 refeições, "ou" preservado) e Treino
+  (exercícios e esquemas de séries).
+- Resumo em PDF com dados completos, incompletos e período sem registros;
+  acentos, textos longos e quebra de página.
+- Baixar e compartilhar o PDF; alternativa quando o compartilhamento de
+  arquivos não estiver disponível.
+- Layout no celular (sem rolagem horizontal).
 
-```bash
-npx serve "VV FIT"
-```
+---
 
-## 3. Como publicar gratuitamente
+## 6. Como instalar no celular
 
-Recomendado para quem não tem experiência técnica: **Netlify Drop**.
+1. Abra o link publicado no **Chrome** (Android) ou **Safari** (iPhone).
+2. Menu → **"Adicionar à tela inicial"** / **"Instalar aplicativo"**.
+3. O app abre em tela cheia e funciona offline; os dados continuam no aparelho.
 
-### Netlify Drop (mais simples)
-1. Acesse `app.netlify.com/drop` no navegador.
-2. Arraste a pasta **VV FIT** inteira para a página.
-3. Em poucos segundos o Netlify gera um link público (ex: `https://algum-nome.netlify.app`).
-4. Abra esse link no celular pelo Google Chrome — pronto para instalar.
+No iPhone, `navigator.share` com arquivos costuma funcionar no Safari 16+; em
+navegadores mais antigos o app cai automaticamente no download + instrução.
 
-Não é necessário criar conta para o primeiro deploy, nem comprar domínio.
+---
 
-### GitHub Pages (alternativa)
-1. Crie um repositório no GitHub e envie o conteúdo da pasta **VV FIT** para a raiz dele.
-2. Em **Settings → Pages**, selecione a branch principal e a pasta `/root`.
-3. O GitHub fornece uma URL como `https://usuario.github.io/repositorio/`.
+## 7. Como publicar / atualizar
 
-### Cloudflare Pages (alternativa)
-Funciona de forma parecida ao GitHub Pages, conectando o repositório e publicando automaticamente a cada atualização.
+**Publicação**: **GitHub Pages**, branch **`main`**, pasta raiz —
+`https://mariossma2017.github.io/VVFIT/`. Cada push para `main` dispara um novo
+build automático (1–2 min).
 
-## 4. Como instalar no Android
+Para publicar uma alteração:
+1. Edite os arquivos.
+2. **Aumente `CACHE_VERSAO`** em [`service-worker.js`](service-worker.js)
+   (ex.: `vvfit-v3.0.0` → `vvfit-v3.0.1`). **Obrigatório** — sem isso o celular
+   continua com a versão em cache. Se adicionar/renomear arquivos, atualize
+   também `ARQUIVOS_ESSENCIAIS` na mesma lista.
+3. `git add -A && git commit && git push origin main` (sem `--force`).
+4. Na próxima abertura, o service worker baixa a nova versão em segundo plano e
+   mostra um aviso pedindo para fechar e abrir o app. **A atualização do cache
+   não apaga `localStorage` nem `IndexedDB`** — os dados da usuária permanecem.
 
-1. Abra o link publicado no **Google Chrome** do celular.
-2. Toque no menu de três pontos (canto superior direito).
-3. Selecione **"Adicionar à tela inicial"** ou **"Instalar aplicativo"**.
-4. Confirme a instalação.
+Alternativas de hospedagem (mesma pasta, arquivos estáticos): Netlify Drop,
+Cloudflare Pages.
 
-O app também mostra um botão **"Instalar aplicativo"** na tela, que abre o instalador automático do Chrome quando disponível, ou repete essas instruções.
+---
 
-Depois de instalado, o VV FIT abre em tela cheia, sem a barra de endereço do navegador, e funciona mesmo sem internet (os dados continuam salvos no aparelho).
+## 8. Funcionalidades
 
-## 5. Como atualizar o aplicativo no futuro
+- Protocolo completo da Fase 1 (alimentação de 5 refeições + treinos de segunda
+  a sábado + AEJ), transcrito do PDF, sem invenção de números.
+- Suplementação como informativo (sem prescrição) + anotações de consulta.
+- Registro rápido por botões (treino e alimentação), com detalhes opcionais.
+- Registro separado de **AEJ** e **escada** com duração.
+- Registro diário opcional de **sono** e **disposição**.
+- Controle de água, medidas corporais, fotos de evolução com comparação.
+- Check-in semanal com comparação automática.
+- Calendário mensal com indicadores por dia.
+- **Resumo semanal em PDF** (semana / 14 dias / personalizado) com download e
+  compartilhamento nativo (WhatsApp), critérios de cálculo à vista, sem
+  diagnóstico e sem estimativa de composição corporal.
+- Backup/restauração completa (JSON) e exportação por categoria (CSV).
+- 100% offline após o primeiro acesso; instalável como PWA.
 
-1. Edite os arquivos necessários (ex: corrigir um exercício em `data.js`, ajustar uma tela em `screens/`).
-2. Abra [`service-worker.js`](service-worker.js) e aumente o número da constante `CACHE_VERSAO` (ex: de `"vvfit-v1.0.0"` para `"vvfit-v1.0.1"`). Isso é obrigatório — sem esse passo o celular continua usando a versão antiga em cache.
-3. Publique novamente os arquivos atualizados (repita o passo de publicação usado antes).
-4. Da próxima vez que a usuária abrir o app, o service worker baixa a nova versão em segundo plano e mostra um aviso pedindo para fechar e abrir o app novamente.
+## 9. Limitações conhecidas
 
-## 6. Como fazer backup
-
-Dentro do app: **Perfil → Configurações → Exportar backup completo (JSON)**. Isso baixa um arquivo `vvfit_backup_AAAA-MM-DD.json` contendo perfil, treinos, alimentação, água, medidas, check-ins e fotos.
-
-Guarde esse arquivo em um local seguro (Google Drive, e-mail para você mesma, etc). Para restaurar, use **Importar backup (JSON)** na mesma tela e selecione o arquivo.
-
-Também é possível exportar registros individuais em **CSV** (treinos, alimentação, água, evolução, check-ins) para abrir em planilhas.
-
-**Importante:** os dados ficam salvos apenas no navegador do aparelho. Se o Chrome for desinstalado, o app for removido ou o histórico/dados do navegador forem limpos, as informações são perdidas — por isso o backup é essencial.
-
-## 7. Funcionalidades implementadas
-
-- Protocolo completo (5 dias de treino + 2 dias de descanso, plano alimentar de 4 refeições) extraído do documento original, sem alterações.
-- Navegação inferior fixa com 5 áreas: Início, Treino, Alimentação, Evolução, Perfil.
-- Tela Início com saudação, data, treino do dia, protocolo do dia, adesão semanal, água, sequência de dias e frase de incentivo.
-- Cards de exercício expansíveis (nome/séries/repetições/aparelho → cadência/descanso/intensidade/execução/erros comuns/objetivo).
-- Registro de cargas por série (carga, repetições, RPE, concluída), com histórico, melhor carga e sugestão visual de progressão (após 2 sessões seguidas no limite superior de repetições).
-- Modo "Treino em andamento": cronômetro geral, cronômetro de descanso com vibração/som e ajuste de ±15s, pausa, navegação entre exercícios, finalização com resumo (tempo, séries, carga total, RPE, observações, status completo/parcial/não realizado).
-- Histórico de treinos por dia, com frequência semanal/mensal e gráficos de evolução de carga.
-- Plano alimentar completo com 2 opções por refeição, substituições e finalidade de cada refeição.
-- Registro de refeições (status, horário real, foto, fome/saciedade, observações) e indicador diário (dentro/parcial/fora do plano).
-- Controle de água com atalhos (200/300/500ml), valor personalizado, remoção de lançamento e barra de progresso.
-- Registro de medidas corporais (peso, cintura, abdômen, quadril, coxas, braços, peito, panturrilha) com gráficos individuais em SVG.
-- Fotos de evolução (frontal/lateral/costas) com comparação lado a lado e slider deslizante entre duas datas.
-- Check-in semanal completo, com comparação automática ao check-in anterior.
-- Calendário mensal com indicadores de treino, alimentação, água e check-in por dia.
-- Relatórios por período, com impressão/PDF pelo navegador e compartilhamento via Web Share API quando disponível.
-- Backup/restauração completa em JSON, exportação em CSV, exclusão seletiva de dados (treino, alimentação, fotos) e exclusão total, sempre com confirmação.
-- Perfil editável (nome, foto, peso, meta de peso, horário de treino, meta de água, observações).
-- Funcionamento 100% offline após o primeiro acesso, instalável como aplicativo no Android via Chrome.
-
-## 8. Limitações técnicas existentes
-
-- **Gráficos em SVG nativo:** em vez de depender da biblioteca Chart.js (que exigiria carregamento externo), os gráficos de evolução foram implementados em SVG puro, garantindo funcionamento 100% offline sem dependências externas.
-- **Fotos armazenadas como imagem:** as fotos são salvas no IndexedDB do navegador; não há compressão avançada, então um número muito grande de fotos em alta resolução pode ocupar bastante espaço no aparelho.
-- **Sem notificações push:** o app não envia lembretes fora do horário em que estiver aberto (não há backend nem permissão de notificação push configurada), conforme pedido de não depender de serviços externos.
-- **Armazenamento local apenas:** não há sincronização entre aparelhos. Um backup/restauração manual (JSON) é o único jeito de mover os dados de um celular para outro.
-- **Cálculo de sequência de dias e adesão:** os pesos de adesão (treino/alimentação/água/check-in) são configuráveis, mas os critérios de "dia válido" seguem uma lógica simples definida em `core.js` — podem ser ajustados conforme necessidade.
+- **Estimativas nutricionais**: o app não exibe calorias/macros porque o
+  documento da Fase 1 não os traz. Se algum dia forem adicionados, devem ser
+  marcados claramente como estimativa e com a base usada.
+- **Service Worker**: só registra em `http(s)://` real (não no `file://` nem em
+  alguns ambientes de pré-visualização). Em produção (GitHub Pages) funciona.
+- **Compartilhamento de arquivo**: depende de `navigator.canShare({files})`.
+  Onde não houver, o app baixa o PDF e orienta o anexo manual.
+- **Sem sincronização entre aparelhos**: backup/restauração manual (JSON) é o
+  único caminho.
+- **Gráficos em SVG nativo** e **fotos sem compressão avançada** (IndexedDB),
+  como nas versões anteriores.

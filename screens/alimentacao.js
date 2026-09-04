@@ -30,7 +30,8 @@ function renderAlimentacao() {
         <h2>Alimentação</h2>
         <input type="date" id="input-data-alimentacao" value="${data}" max="${Util.hojeISO()}">
       </div>
-      <p class="texto-suave">${Util.escapeHtml(PROTOCOLO.gastoEnergetico.metaCaloricaKcal)} kcal/dia · P ${PROTOCOLO.macros.proteina.quantidadeG}g · C ${PROTOCOLO.macros.carboidrato.quantidadeG}g · G ${PROTOCOLO.macros.gordura.quantidadeG}g</p>
+      <p class="texto-suave">${PROTOCOLO.refeicoes.length} refeições · ${Util.escapeHtml(PROTOCOLO.fase ? PROTOCOLO.fase.nome : "Plano")}</p>
+      ${PROTOCOLO.orientacoes ? `<p class="texto-suave">${Util.escapeHtml(PROTOCOLO.orientacoes.hidratacao)}</p>` : ""}
       <div class="progress-bar-track mt-8"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
       <p class="texto-suave mt-8">${pct}% de adesão hoje</p>
       <div class="grid-stats">
@@ -87,18 +88,20 @@ function renderCardRefeicao(refeicao, data) {
       <div class="refeicao-header">
         <div>
           <h3>${refeicao.ordem}️⃣ ${Util.escapeHtml(refeicao.nome)}</h3>
-          <div class="refeicao-horario">${refeicao.horario} · ~${refeicao.kcalAprox} kcal</div>
+          ${refeicao.horario || refeicao.kcalAprox ? `<div class="refeicao-horario">${refeicao.horario ? Util.escapeHtml(refeicao.horario) : ""}${refeicao.horario && refeicao.kcalAprox ? " · " : ""}${refeicao.kcalAprox ? "~" + refeicao.kcalAprox + " kcal" : ""}</div>` : ""}
         </div>
       </div>
 
-      ${refeicao.opcoes.map((op) => renderOpcaoRefeicao(op)).join("")}
+      ${refeicao.opcoes.map((op) => renderOpcaoRefeicao(op, refeicao.opcoes.length > 1)).join("")}
 
-      <div class="secao-titulo">Substituições equivalentes</div>
-      <ul class="lista-simples">
-        ${refeicao.substituicoes.map((s) => `<li>${Util.escapeHtml(s)}</li>`).join("")}
-      </ul>
+      ${refeicao.substituicoes && refeicao.substituicoes.length ? `
+        <div class="secao-titulo">Substituições equivalentes</div>
+        <ul class="lista-simples">
+          ${refeicao.substituicoes.map((s) => `<li>${Util.escapeHtml(s)}</li>`).join("")}
+        </ul>
+      ` : ""}
 
-      <p class="texto-suave mt-8"><strong>Por quê essa refeição:</strong> ${Util.escapeHtml(refeicao.finalidade)}</p>
+      ${refeicao.finalidade ? `<p class="texto-suave mt-8"><strong>Por quê essa refeição:</strong> ${Util.escapeHtml(refeicao.finalidade)}</p>` : ""}
 
       <div class="divider"></div>
       <h4>Como foi esta refeição?</h4>
@@ -109,10 +112,11 @@ function renderCardRefeicao(refeicao, data) {
         <button type="button" class="btn-status ${status === "nao_feito" ? "ativo-nao-feito" : ""}" data-status="nao_feito">❌ Não feito</button>
       </div>
 
+      ${refeicao.opcoes.length > 1 ? `
       <div class="chip-opcoes mt-8 ${status === "feito" ? "" : "hidden"}" data-bloco-opcao>
-        <div class="chip ${registro.opcaoEscolhida === "opcao1" ? "selecionado" : ""}" data-opcao="opcao1">Opção 1</div>
-        <div class="chip ${registro.opcaoEscolhida === "opcao2" ? "selecionado" : ""}" data-opcao="opcao2">Opção 2</div>
+        ${refeicao.opcoes.map((op) => `<div class="chip ${registro.opcaoEscolhida === op.id ? "selecionado" : ""}" data-opcao="${op.id}">${Util.escapeHtml(op.nome)}</div>`).join("")}
       </div>
+      ` : ""}
 
       <div class="mt-8 ${status === "substituicao" ? "" : "hidden"}" data-bloco-substituicao>
         <input type="text" data-campo="substituicaoTexto" placeholder="O que você comeu no lugar? (opcional)" value="${Util.escapeHtml(registro.substituicaoTexto || "")}">
@@ -139,19 +143,19 @@ function renderCardRefeicao(refeicao, data) {
   `;
 }
 
-function renderOpcaoRefeicao(opcao) {
+function renderOpcaoRefeicao(opcao, mostrarNome) {
   return `
     <div class="opcao-bloco">
-      <h4>${Util.escapeHtml(opcao.nome)}</h4>
+      ${mostrarNome ? `<h4>${Util.escapeHtml(opcao.nome)}</h4>` : ""}
       <ul class="opcao-item-lista">
         ${opcao.itens
           .map(
             (item) =>
-              `<li>${Util.escapeHtml(item.alimento)}${item.quantidade ? " (" + Util.escapeHtml(item.quantidade) + ")" : ""}</li>`
+              `<li>${Util.escapeHtml(item.alimento)}${item.quantidade ? " — " + Util.escapeHtml(item.quantidade) : ""}</li>`
           )
           .join("")}
       </ul>
-      <div class="macro-linha">P ${opcao.totalAprox.proteinaG}g · C ${opcao.totalAprox.carboidratoG}g · G ${opcao.totalAprox.gorduraG}g · ≈${opcao.totalAprox.kcal} kcal</div>
+      ${opcao.totalAprox ? `<div class="macro-linha">P ${opcao.totalAprox.proteinaG}g · C ${opcao.totalAprox.carboidratoG}g · G ${opcao.totalAprox.gorduraG}g · ≈${opcao.totalAprox.kcal} kcal</div>` : ""}
       ${opcao.observacao ? `<p class="texto-suave mt-8">${Util.escapeHtml(opcao.observacao)}</p>` : ""}
     </div>
   `;
@@ -303,9 +307,9 @@ function renderBlocoAgua(data) {
   const pct = Util.clamp(Math.round((total / meta) * 100), 0, 100);
 
   return `
-    <p class="texto-suave">Meta: ${(meta / 1000).toFixed(1)}L/dia (${PROTOCOLO.agua.metaLitrosMin}-${PROTOCOLO.agua.metaLitrosMax}L)</p>
+    <p class="texto-suave">Meta: ${(meta / 1000).toFixed(1)} L/dia${PROTOCOLO.agua.chaMl ? ` + ${PROTOCOLO.agua.chaMl} ml de chá de ${Util.escapeHtml(PROTOCOLO.agua.chaTipo || "")} (contabilizado à parte)` : ""}</p>
     <div class="progress-bar-track"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
-    <p class="texto-suave mt-8">${(total / 1000).toFixed(2)}L registrados (${pct}%)</p>
+    <p class="texto-suave mt-8">${(total / 1000).toFixed(2)} L de água registrados (${pct}%)</p>
     <div class="agua-botoes">
       <button type="button" class="agua-botao" data-agua-add="200">+200ml</button>
       <button type="button" class="agua-botao" data-agua-add="300">+300ml</button>
@@ -375,7 +379,7 @@ function renderHistoricoAlimentacao() {
       const agua = Adesao.totalAguaDia(d);
       if (!registros.length && !agua) return "";
       const pct = Adesao.percentualAlimentacaoDia(d);
-      return `<li><strong>${Util.isoParaBR(d)}</strong> — ${registros.length}/${PROTOCOLO.refeicoes.length} refeições (${pct}%) · água ${(agua / 1000).toFixed(2)}L</li>`;
+      return `<li><strong>${Util.isoParaBR(d)}</strong> — ${registros.length}/${Planos.refeicoesDoDia(d).length} refeições (${pct}%) · água ${(agua / 1000).toFixed(2)}L</li>`;
     })
     .filter(Boolean);
 

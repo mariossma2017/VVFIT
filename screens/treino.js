@@ -37,6 +37,7 @@ function renderVisaoTreinoDia() {
         })
         .join("")}
     </div>
+    <div class="card" id="card-cardio-dia">${renderRegistroCardio(Util.hojeISO())}</div>
     <div id="conteudo-dia-treino"></div>
   `;
 
@@ -44,7 +45,93 @@ function renderVisaoTreinoDia() {
     el.addEventListener("click", () => selecionarDiaTreino(el.getAttribute("data-dia")));
   });
 
+  ligarEventosRegistroCardio(Util.hojeISO());
   renderConteudoDia(dia);
+}
+
+/* ---------------- Registro de AEJ e escada (separados, por data) ---------------- */
+function renderRegistroCardio(data) {
+  const proto = Planos.vigenteEm(data);
+  const diaSemana = Util.isoParaDiaSemana(data);
+  const treinoDia = proto.treinos[diaSemana];
+  const aejPrevisto = proto.aej && proto.aej.dias && proto.aej.dias.indexOf(diaSemana) !== -1
+    ? proto.aej.minutos
+    : null;
+  const escadaPrevista = treinoDia && treinoDia.cardio && treinoDia.cardio.tempo ? treinoDia.cardio.tempo : null;
+
+  const sessoes = DB.getCardio().filter((c) => c.data === data);
+  const totalAej = sessoes.filter((s) => s.tipo === "aej").reduce((n, s) => n + (Number(s.minutos) || 0), 0);
+  const totalEscada = sessoes.filter((s) => s.tipo === "escada").reduce((n, s) => n + (Number(s.minutos) || 0), 0);
+
+  return `
+    <div class="card-titulo-linha">
+      <h3>🚶 AEJ e escada — hoje</h3>
+      <span class="texto-suave">${Util.isoParaBR(data)}</span>
+    </div>
+    <p class="texto-suave">
+      Previsto hoje: AEJ ${aejPrevisto ? aejPrevisto + " min" : "—"}${escadaPrevista ? " · escada " + Util.escapeHtml(escadaPrevista) : ""}
+    </p>
+    <div class="grid-stats">
+      <div class="stat-box"><span class="valor">${totalAej || 0}</span><span class="rotulo">AEJ (min)</span></div>
+      <div class="stat-box"><span class="valor">${totalEscada || 0}</span><span class="rotulo">Escada (min)</span></div>
+    </div>
+    <div class="linha-campos mt-16">
+      <div class="campo-grupo">
+        <label for="cardio-aej-min">AEJ realizado (min)</label>
+        <input type="number" id="cardio-aej-min" inputmode="numeric" min="0" placeholder="Ex: 30">
+      </div>
+      <button type="button" class="btn btn-secundario btn-pequeno" id="btn-add-aej">Registrar AEJ</button>
+    </div>
+    <div class="linha-campos">
+      <div class="campo-grupo">
+        <label for="cardio-escada-min">Escada realizada (min)</label>
+        <input type="number" id="cardio-escada-min" inputmode="numeric" min="0" placeholder="Ex: 15">
+      </div>
+      <button type="button" class="btn btn-secundario btn-pequeno" id="btn-add-escada">Registrar escada</button>
+    </div>
+    ${sessoes.length ? `
+      <div class="secao-titulo">Sessões de hoje</div>
+      ${sessoes.map((s) => `
+        <div class="agua-lista-item">
+          <span>${s.tipo === "aej" ? "AEJ" : "Escada"} — ${Number(s.minutos) || 0} min${s.criadoEm ? " · " + new Date(s.criadoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}</span>
+          <button type="button" class="btn-icone btn-pequeno" data-remover-cardio="${s.id}" style="width:30px;height:30px;min-height:30px;">✕</button>
+        </div>
+      `).join("")}
+    ` : ""}
+    <p class="texto-suave mt-8">Campo vazio não conta como zero: registre apenas o que realmente fez.</p>
+  `;
+}
+
+function ligarEventosRegistroCardio(data) {
+  const recarregar = () => {
+    const card = document.getElementById("card-cardio-dia");
+    if (card) {
+      card.innerHTML = renderRegistroCardio(data);
+      ligarEventosRegistroCardio(data);
+    }
+  };
+  const addSessao = (tipo, inputId) => {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const min = Number(input.value);
+    if (!min || min <= 0) {
+      mostrarToast("Informe os minutos.", "erro");
+      return;
+    }
+    DB.addCardio({ id: Util.uuid(), data, tipo, minutos: min, obs: "", criadoEm: new Date().toISOString() });
+    mostrarToast(`${tipo === "aej" ? "AEJ" : "Escada"} registrado`, "sucesso");
+    recarregar();
+  };
+  const btnAej = document.getElementById("btn-add-aej");
+  if (btnAej) btnAej.addEventListener("click", () => addSessao("aej", "cardio-aej-min"));
+  const btnEscada = document.getElementById("btn-add-escada");
+  if (btnEscada) btnEscada.addEventListener("click", () => addSessao("escada", "cardio-escada-min"));
+  document.querySelectorAll("[data-remover-cardio]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      DB.removeCardio(btn.getAttribute("data-remover-cardio"));
+      recarregar();
+    });
+  });
 }
 
 function diaISOparaEsteDia(diaSemanaAlvo) {
@@ -79,6 +166,10 @@ function obterSessaoTreino(data, diaSemana) {
 // Garante que sessões já salvas ganhem exercícios adicionados/corrigidos
 // posteriormente no protocolo (data.js), sem apagar nenhum status já registrado.
 function reconciliarExerciciosComProtocolo(sessao, diaSemana) {
+  // Não injeta exercícios da Fase 1 em sessões anteriores ao início da Fase 1:
+  // o histórico antigo é preservado exatamente como foi registrado.
+  const faseInicio = DB.getFaseInicio();
+  if (faseInicio && sessao.data < faseInicio) return;
   const proto = PROTOCOLO.treinos[diaSemana];
   if (!proto || !proto.exercicios) return;
   let alterou = false;
@@ -218,9 +309,11 @@ function renderConteudoDia(dia) {
         ${proto.grupos.map((g) => `<span class="tag">${Util.escapeHtml(g)}</span>`).join("")}
       </div>
       ${proto.observacaoDia ? `<p class="mt-8">${Util.escapeHtml(proto.observacaoDia)}</p>` : ""}
-      <div class="secao-titulo">Aquecimento</div>
-      <p class="texto-suave">${Util.escapeHtml(proto.aquecimento.equipamento || "—")} · ${Util.escapeHtml(proto.aquecimento.tempo || "—")}</p>
-      ${proto.aquecimento.intensidade ? `<p class="texto-suave">${Util.escapeHtml(proto.aquecimento.intensidade)}</p>` : ""}
+      ${proto.aquecimento ? `
+        <div class="secao-titulo">Aquecimento</div>
+        <p class="texto-suave">${Util.escapeHtml(proto.aquecimento.equipamento || "—")}${proto.aquecimento.tempo ? " · " + Util.escapeHtml(proto.aquecimento.tempo) : ""}</p>
+        ${proto.aquecimento.intensidade ? `<p class="texto-suave">${Util.escapeHtml(proto.aquecimento.intensidade)}</p>` : ""}
+      ` : ""}
     </div>
 
     <div class="secao-titulo">Exercícios (${proto.exercicios.length})</div>
@@ -230,10 +323,11 @@ function renderConteudoDia(dia) {
 
     ${proto.cardio ? `
       <div class="card">
-        <h3>Cardio (fim do treino)</h3>
-        <p class="texto-suave">${Util.escapeHtml(proto.cardio.equipamento)} · ${Util.escapeHtml(proto.cardio.tempo)}</p>
-        <p class="texto-suave">${Util.escapeHtml(proto.cardio.intensidade)}</p>
+        <h3>Escada (fim do treino)</h3>
+        <p class="texto-suave">${Util.escapeHtml(proto.cardio.equipamento)}${proto.cardio.tempo ? " · " + Util.escapeHtml(proto.cardio.tempo) : ""}</p>
+        ${proto.cardio.intensidade ? `<p class="texto-suave">${Util.escapeHtml(proto.cardio.intensidade)}</p>` : ""}
         ${proto.cardio.objetivo ? `<p class="mt-8">${Util.escapeHtml(proto.cardio.objetivo)}</p>` : ""}
+        <p class="texto-suave mt-8">Registre a escada realizada no bloco "AEJ e escada" acima.</p>
       </div>
     ` : ""}
 
@@ -294,7 +388,7 @@ function renderExercicioItem(ex, registro) {
         <div class="num">${ex.ordem}</div>
         <div class="info-principal">
           <div class="nome-exercicio">${Util.escapeHtml(ex.nome)}</div>
-          <div class="meta-linha">${ex.series}x${Util.escapeHtml(String(ex.repeticoes))} · ${Util.escapeHtml(ex.equipamento || "—")}</div>
+          <div class="meta-linha">${Util.escapeHtml(esquemaExercicio(ex))}${ex.equipamento ? " · " + Util.escapeHtml(ex.equipamento) : ""}</div>
         </div>
         <div class="seta-expandir">▼</div>
       </div>
@@ -358,6 +452,16 @@ function renderExercicioItem(ex, registro) {
 
 function detalheItem(rotulo, valor) {
   return `<div class="detalhe-item"><div class="rotulo">${Util.escapeHtml(rotulo)}</div><div class="valor-texto">${Util.escapeHtml(valor)}</div></div>`;
+}
+
+// Esquema de séries/repetições: usa ex.esquema quando o documento traz um
+// formato irregular (ex.: "1x25 + 3x20"); caso contrário monta "SÉRIESxREPS".
+function esquemaExercicio(ex) {
+  if (ex.esquema) return ex.esquema;
+  const s = ex.series;
+  const r = ex.repeticoes;
+  if (s === null || s === undefined || s === "") return String(r || "");
+  return `${s}x${r}`;
 }
 
 function resumoUltimoRegistro(ex) {

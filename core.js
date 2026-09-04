@@ -150,11 +150,61 @@ function abrirModal(conteudoHtml, opts) {
   return overlay;
 }
 
+/* ---------------- Planos (plano vigente por data) ----------------
+ * A partir da Fase 1, o plano passa a ter data de início configurável
+ * (config.faseInicio). Para qualquer data anterior a essa, o "previsto"
+ * é calculado com o plano anterior (PROTOCOLO_LEGADO), preservando a
+ * leitura correta do histórico. Se não houver data configurada, a
+ * Fase 1 vale para todas as datas.
+ */
+const Planos = {
+  get ATIVO() {
+    return PROTOCOLO;
+  },
+  get LEGADO() {
+    return typeof PROTOCOLO_LEGADO !== "undefined" ? PROTOCOLO_LEGADO : PROTOCOLO;
+  },
+  faseInicio() {
+    return DB.getFaseInicio();
+  },
+  vigenteEm(iso) {
+    const ini = this.faseInicio();
+    if (!ini) return this.ATIVO;
+    return iso >= ini ? this.ATIVO : this.LEGADO;
+  },
+  ehFase1Em(iso) {
+    return this.vigenteEm(iso) === this.ATIVO;
+  },
+  treinoDoDia(iso) {
+    const dia = Util.isoParaDiaSemana(iso);
+    return this.vigenteEm(iso).treinos[dia];
+  },
+  refeicoesDoDia(iso) {
+    return this.vigenteEm(iso).refeicoes || [];
+  },
+  nomeFaseEm(iso) {
+    const p = this.vigenteEm(iso);
+    return p.fase ? p.fase.nome : "Plano";
+  }
+};
+
 /* ---------------- Cálculo de adesão ---------------- */
 const Adesao = {
   treinoDoDia(iso) {
-    const dia = Util.isoParaDiaSemana(iso);
-    return PROTOCOLO.treinos[dia];
+    return Planos.treinoDoDia(iso);
+  },
+
+  // Distingue "não informado" (dia de treino passado, sem nenhum registro) de
+  // "não feito" (marcado explicitamente) e de dias futuros. Usado no resumo.
+  previstoRealizadoTreino(iso) {
+    const proto = Planos.treinoDoDia(iso);
+    if (!proto || proto.tipo !== "treino") return { previsto: false };
+    if (iso > Util.hojeISO()) return { previsto: true, futuro: true };
+    const sessoes = DB.getTreinos().filter((t) => t.data === iso);
+    if (!sessoes.length) return { previsto: true, status: "nao_informado" };
+    const st = sessoes[sessoes.length - 1].status || "nao_realizado";
+    const norm = st === "completo" ? "completo" : st === "parcial" ? "parcial" : "nao_feito";
+    return { previsto: true, status: norm };
   },
 
   statusTreinoNoDia(iso) {
@@ -394,13 +444,55 @@ function mostrarInstrucoesInstalacao() {
 
 /* ---------------- Migração de dados (registro simplificado por botões) ---------------- */
 const Migracao = {
-  VERSAO_ATUAL: 2,
+  VERSAO_ATUAL: 3,
 
   executar() {
     const atual = DB.getVersaoDados() || 1;
     if (atual >= this.VERSAO_ATUAL) return;
     if (atual < 2) this._migrarParaV2();
+    if (atual < 3) this._migrarParaV3();
     DB.setVersaoDados(this.VERSAO_ATUAL);
+  },
+
+  /*
+   * v2 → v3: entrada da Fase 1.
+   * Migração PURAMENTE ADITIVA. Nenhum registro (treinos, refeições, água,
+   * medidas, check-ins, fotos) é alterado, remapeado ou apagado. Os registros
+   * antigos de refeição mantêm o refeicaoId original (café/almoço/…): eles
+   * continuam contando no histórico e nos relatórios, e a tela de hoje passa
+   * a mostrar as 5 refeições da Fase 1.
+   *
+   * A migração faz apenas duas coisas, ambas sem tocar em nenhum registro:
+   *  1. Define uma data de início para a Fase 1 (config.faseInicio), para que
+   *     o "previsto" de datas anteriores continue sendo calculado pelo plano
+   *     antigo. Se já houver histórico, a data padrão é hoje; a usuária pode
+   *     ajustá-la em Perfil → Fase do plano.
+   *  2. Atualiza a META de água do perfil para a da Fase 1 (3 L/dia), mas
+   *     SOMENTE se ela ainda estivesse na meta padrão do plano anterior
+   *     (2350 ml) ou vazia — uma meta personalizada pela usuária é mantida.
+   *     Os lançamentos de água (vvfit_agua) não são tocados.
+   */
+  _migrarParaV3() {
+    const cfg = DB.getConfig();
+    if (!cfg.faseInicio) {
+      const temHistorico =
+        (DB.getTreinos() || []).length ||
+        (DB.getAlimentacao() || []).length ||
+        (DB.getAgua() || []).length ||
+        (DB.getEvolucao() || []).length ||
+        (DB.getCheckins() || []).length;
+      cfg.faseInicio = temHistorico ? Util.hojeISO() : null;
+      DB.setConfig(cfg);
+    }
+
+    const META_AGUA_LEGADO = 2350; // PROTOCOLO_LEGADO.agua.metaMlPadrao
+    const perfil = DB.getPerfil();
+    if (!perfil.metaAguaMl || perfil.metaAguaMl === META_AGUA_LEGADO) {
+      perfil.metaAguaMl = (typeof PROTOCOLO !== "undefined" && PROTOCOLO.agua)
+        ? PROTOCOLO.agua.metaMlPadrao
+        : 3000;
+      DB.setPerfil(perfil);
+    }
   },
 
   // v1 → v2: treino passa a ter status por exercício (feito/parcial/não feito)

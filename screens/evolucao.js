@@ -55,9 +55,21 @@ function renderEvolucao() {
         </div>
         <label for="ev-obs">Observações</label>
         <textarea id="ev-obs" placeholder="Alguma observação sobre essas medidas?"></textarea>
-        <button type="submit" class="btn btn-primario mt-16">Salvar medidas</button>
+        <div class="divider"></div>
+        <div class="secao-titulo">Sono e disposição do dia (opcional)</div>
+        <div class="linha-campos">
+          <div class="campo-grupo"><label for="ev-sono">Sono (horas)</label><input type="number" step="0.5" inputmode="decimal" id="ev-sono"></div>
+          <div class="campo-grupo"><label for="ev-disposicao">Disposição (1-5)</label><input type="number" min="1" max="5" inputmode="numeric" id="ev-disposicao"></div>
+        </div>
+        <label for="ev-bemestar-obs">Observação sobre sono/disposição</label>
+        <textarea id="ev-bemestar-obs" placeholder="Opcional"></textarea>
+        <button type="submit" class="btn btn-primario mt-16">Salvar</button>
       </form>
+      <p class="texto-suave mt-8">Campos em branco não são registrados (não viram zero).</p>
     </div>
+
+    <div class="secao-titulo">Sono e disposição — histórico</div>
+    <div id="historico-bemestar">${renderHistoricoBemEstar()}</div>
 
     <div class="secao-titulo">Gráficos de evolução</div>
     <div id="graficos-evolucao">${renderTodosGraficos()}</div>
@@ -117,21 +129,49 @@ function salvarEvolucao(e) {
   });
   registro.observacoes = document.getElementById("ev-obs").value;
 
-  if (!algumValor) {
-    mostrarToast("Informe ao menos uma medida.", "erro");
+  // Sono e disposição — gravados no registro diário de bem-estar (à parte).
+  const sonoVal = document.getElementById("ev-sono").value;
+  const dispVal = document.getElementById("ev-disposicao").value;
+  const bemObs = document.getElementById("ev-bemestar-obs").value;
+  const temBemEstar = sonoVal !== "" || dispVal !== "" || bemObs !== "";
+  if (temBemEstar) {
+    DB.addOrUpdateBemEstar({
+      data,
+      sonoHoras: sonoVal === "" ? null : parseFloat(sonoVal),
+      disposicao: dispVal === "" ? null : parseInt(dispVal, 10),
+      obs: bemObs
+    });
+  }
+
+  if (!algumValor && !temBemEstar) {
+    mostrarToast("Informe ao menos uma medida ou sono/disposição.", "erro");
     return;
   }
 
-  DB.addEvolucao(registro);
-
-  if (registro.peso !== null) {
-    const perfil = DB.getPerfil();
-    perfil.pesoAtualKg = registro.peso;
-    DB.setPerfil(perfil);
+  if (algumValor) {
+    DB.addEvolucao(registro);
+    if (registro.peso !== null) {
+      const perfil = DB.getPerfil();
+      perfil.pesoAtualKg = registro.peso;
+      DB.setPerfil(perfil);
+    }
   }
 
-  mostrarToast("Medidas salvas!", "sucesso");
+  mostrarToast("Registro salvo!", "sucesso");
   renderEvolucao();
+}
+
+function renderHistoricoBemEstar() {
+  const arr = [...DB.getBemEstar()].reverse().slice(0, 10);
+  if (!arr.length) return `<p class="texto-suave">Nenhum registro de sono/disposição ainda.</p>`;
+  return `<ul class="lista-simples">${arr
+    .map((b) => {
+      const partes = [];
+      if (b.sonoHoras !== null && b.sonoHoras !== undefined && b.sonoHoras !== "") partes.push(`sono ${b.sonoHoras} h`);
+      if (b.disposicao !== null && b.disposicao !== undefined && b.disposicao !== "") partes.push(`disposição ${b.disposicao}/5`);
+      return `<li><strong>${Util.isoParaBR(b.data)}</strong> — ${partes.join(" · ") || "—"}${b.obs ? `<br><span class="texto-suave">${Util.escapeHtml(b.obs)}</span>` : ""}</li>`;
+    })
+    .join("")}</ul>`;
 }
 
 function renderTodosGraficos() {

@@ -30,10 +30,19 @@ function renderPerfil() {
       <p class="texto-suave"><strong>Dias de treino:</strong> ${base.diasTreino.map((d) => DIAS_LABEL[d]).join(", ")}</p>
       <p class="texto-suave"><strong>Dias de descanso:</strong> ${base.diasDescanso.map((d) => DIAS_LABEL[d]).join(", ")}</p>
       <p class="texto-suave"><strong>Horário do treino:</strong> ${Util.escapeHtml(perfil.horarioTreino || base.horarioTreinoHabitual)}</p>
-      <p class="texto-suave"><strong>Meta calórica:</strong> ~${PROTOCOLO.gastoEnergetico.metaCaloricaKcal} kcal/dia</p>
-      <p class="texto-suave"><strong>Proteína:</strong> ${PROTOCOLO.macros.proteina.quantidadeG}g · <strong>Carboidrato:</strong> ${PROTOCOLO.macros.carboidrato.quantidadeG}g · <strong>Gordura:</strong> ${PROTOCOLO.macros.gordura.quantidadeG}g</p>
-      <p class="texto-suave"><strong>Meta de água:</strong> ${((perfil.metaAguaMl || PROTOCOLO.agua.metaMlPadrao) / 1000).toFixed(1)}L/dia</p>
+      <p class="texto-suave"><strong>Meta de água:</strong> ${((perfil.metaAguaMl || PROTOCOLO.agua.metaMlPadrao) / 1000).toFixed(1)} L/dia${PROTOCOLO.agua.chaMl ? ` + ${PROTOCOLO.agua.chaMl} ml de chá de ${Util.escapeHtml(PROTOCOLO.agua.chaTipo || "")}` : ""}</p>
+      ${PROTOCOLO.macros ? "" : `<p class="texto-suave">A Fase 1 não define metas calóricas ou de macronutrientes — esses números não constam no documento e não são exibidos.</p>`}
       ${perfil.observacoes ? `<div class="divider"></div><p class="texto-suave"><strong>Observações:</strong> ${Util.escapeHtml(perfil.observacoes)}</p>` : ""}
+    </div>
+
+    <div class="card">
+      <h3>Fase do plano</h3>
+      <div id="area-fase">${renderCardFase()}</div>
+    </div>
+
+    <div class="card">
+      <h3>Suplementação — informativo do plano</h3>
+      <div id="area-suplementacao">${renderCardSuplementacao()}</div>
     </div>
 
     <div class="card">
@@ -49,8 +58,8 @@ function renderPerfil() {
       <div id="area-calendario">${renderCalendario(mesCalendarioAtual)}</div>
     </div>
 
-    <div class="card">
-      <h3>Relatórios</h3>
+    <div class="card" id="card-resumo-semanal">
+      <h3>Resumo semanal em PDF</h3>
       <div id="area-relatorio">${renderFormRelatorio()}</div>
     </div>
 
@@ -66,6 +75,71 @@ function renderPerfil() {
   ligarEventosRelatorio();
   ligarEventosConfiguracoes();
   ligarEventosListaCheckins();
+  ligarEventosFase();
+}
+
+/* ================= FASE DO PLANO ================= */
+function renderCardFase() {
+  const cfg = DB.getConfig();
+  const inicio = cfg.faseInicio;
+  const o = PROTOCOLO.orientacoes || {};
+  return `
+    <p class="texto-suave"><strong>Fase atual:</strong> ${Util.escapeHtml(PROTOCOLO.fase ? PROTOCOLO.fase.nome : "Plano")}</p>
+    <p class="texto-suave"><strong>Fonte:</strong> ${Util.escapeHtml(PROTOCOLO.fase ? PROTOCOLO.fase.fonte : "—")}</p>
+    <label for="fase-inicio">Data de início da Fase 1</label>
+    <input type="date" id="fase-inicio" value="${inicio || ""}" max="${Util.hojeISO()}">
+    <p class="texto-suave">Datas anteriores a esta continuam sendo calculadas pelo plano anterior, preservando o histórico. Em branco, a Fase 1 vale para todas as datas.</p>
+    <button type="button" class="btn btn-outline btn-pequeno mt-8" id="btn-salvar-fase-inicio">Salvar data de início</button>
+    <div class="divider"></div>
+    <div class="secao-titulo">Orientações do documento</div>
+    <ul class="lista-simples">
+      ${o.descansoEntreSeries ? `<li><strong>Descanso entre séries:</strong> ${Util.escapeHtml(o.descansoEntreSeries)}</li>` : ""}
+      ${o.treino ? `<li><strong>Treino:</strong> ${Util.escapeHtml(o.treino)}</li>` : ""}
+      ${o.hidratacao ? `<li><strong>Hidratação:</strong> ${Util.escapeHtml(o.hidratacao)}</li>` : ""}
+      ${PROTOCOLO.aej ? `<li><strong>AEJ:</strong> ${Util.escapeHtml(PROTOCOLO.aej.observacao)}</li>` : ""}
+      ${o.refeicaoLivre ? `<li><strong>Refeição livre:</strong> ${Util.escapeHtml(o.refeicaoLivre)}</li>` : ""}
+      ${o.feedback ? `<li><strong>Feedback:</strong> ${Util.escapeHtml(o.feedback)}</li>` : ""}
+    </ul>
+  `;
+}
+
+function renderCardSuplementacao() {
+  const s = PROTOCOLO.suplementacao;
+  if (!s) return `<p class="texto-suave">Sem informações de suplementação no plano.</p>`;
+  const cfg = DB.getConfig();
+  return `
+    <div class="aviso-armazenamento">${Util.escapeHtml(s.aviso)}</div>
+    ${s.blocos.map((b) => `
+      <div class="secao-titulo">${Util.escapeHtml(b.titulo)}</div>
+      <ul class="lista-simples">
+        ${b.itens.map((i) => `<li>${Util.escapeHtml(i)}</li>`).join("")}
+      </ul>
+    `).join("")}
+    <label for="suplementacao-consulta" class="mt-16">Anotações pessoais de consulta (não é prescrição)</label>
+    <textarea id="suplementacao-consulta" placeholder="Espaço livre para suas anotações">${Util.escapeHtml(cfg.suplementacaoNotas || "")}</textarea>
+    <button type="button" class="btn btn-outline btn-pequeno mt-8" id="btn-salvar-suplementacao-notas">Salvar anotações</button>
+  `;
+}
+
+function ligarEventosFase() {
+  const btnFase = document.getElementById("btn-salvar-fase-inicio");
+  if (btnFase) {
+    btnFase.addEventListener("click", () => {
+      const val = document.getElementById("fase-inicio").value || null;
+      DB.setFaseInicio(val);
+      mostrarToast("Data de início da Fase 1 salva.", "sucesso");
+      renderPerfil();
+    });
+  }
+  const btnSup = document.getElementById("btn-salvar-suplementacao-notas");
+  if (btnSup) {
+    btnSup.addEventListener("click", () => {
+      const cfg = DB.getConfig();
+      cfg.suplementacaoNotas = document.getElementById("suplementacao-consulta").value;
+      DB.setConfig(cfg);
+      mostrarToast("Anotações salvas.", "sucesso");
+    });
+  }
 }
 
 /* ================= EDITAR PERFIL ================= */
@@ -355,7 +429,7 @@ function abrirResumoDia(iso) {
       return `<p>${Util.escapeHtml(s.treinoNome)} — ${rotuloStatusTreino(s.status)} (${s.duracaoSeg ? Util.formatarDuracao(s.duracaoSeg) : "—"})</p><p class="texto-suave">Exercícios feitos: ${feitos}/${(s.exercicios || []).length}</p>`;
     }).join("") : `<p class="texto-suave">Nenhum registro (${Util.escapeHtml(proto.nome)}).</p>`}
     <div class="secao-titulo">Alimentação</div>
-    ${registrosAlimentacao.length ? `<p>${pctAlimentacao}% de adesão · ${registrosAlimentacao.length}/${PROTOCOLO.refeicoes.length} refeições registradas</p>` : `<p class="texto-suave">Nenhuma refeição registrada.</p>`}
+    ${registrosAlimentacao.length ? `<p>${pctAlimentacao}% de adesão · ${registrosAlimentacao.length}/${Planos.refeicoesDoDia(iso).length} refeições registradas</p>` : `<p class="texto-suave">Nenhuma refeição registrada.</p>`}
     <div class="secao-titulo">Água</div>
     <p>${(agua / 1000).toFixed(2)}L</p>
     <div class="secao-titulo">Check-in</div>
@@ -368,135 +442,134 @@ function abrirResumoDia(iso) {
   `);
 }
 
-/* ================= RELATÓRIOS ================= */
+/* ================= RESUMO SEMANAL (PDF) ================= */
+let resumoPreset = "semana";
+
 function renderFormRelatorio() {
+  const semana = ResumoDados.semanaAtual();
+  const q = ResumoDados.ultimos14();
   return `
-    <div class="linha-campos">
-      <div class="campo-grupo"><label for="rel-inicio">De</label><input type="date" id="rel-inicio" value="${Util.addDias(Util.hojeISO(), -29)}"></div>
-      <div class="campo-grupo"><label for="rel-fim">Até</label><input type="date" id="rel-fim" value="${Util.hojeISO()}" max="${Util.hojeISO()}"></div>
+    <p class="texto-suave">Gera um resumo do acompanhamento (treinos, AEJ/escada, alimentação, hidratação, peso, medidas, sono/disposição e observações) para baixar em PDF ou compartilhar no WhatsApp.</p>
+    <label>Período</label>
+    <div class="chip-opcoes">
+      <div class="chip ${resumoPreset === "semana" ? "selecionado" : ""}" data-preset="semana">Semana (seg–dom)</div>
+      <div class="chip ${resumoPreset === "quinzena" ? "selecionado" : ""}" data-preset="quinzena">Últimos 14 dias</div>
+      <div class="chip ${resumoPreset === "personalizado" ? "selecionado" : ""}" data-preset="personalizado">Personalizado</div>
     </div>
-    <button type="button" class="btn btn-outline" id="btn-gerar-relatorio">Gerar relatório</button>
+    <div class="linha-campos mt-8">
+      <div class="campo-grupo"><label for="rel-inicio">De</label><input type="date" id="rel-inicio" value="${resumoPreset === "quinzena" ? q.inicio : semana.inicio}"></div>
+      <div class="campo-grupo"><label for="rel-fim">Até</label><input type="date" id="rel-fim" value="${resumoPreset === "quinzena" ? q.fim : semana.fim}"></div>
+    </div>
+    <div class="lista-config-item">
+      <div><div class="titulo-item">Incluir fotos de evolução no PDF</div><div class="desc-item">Fora por padrão. Marque para incluir as fotos do período.</div></div>
+      <input type="checkbox" id="rel-incluir-fotos">
+    </div>
+    <button type="button" class="btn btn-outline mt-8" id="btn-gerar-relatorio">Gerar prévia</button>
+    <button type="button" class="btn btn-primario mt-8" id="btn-baixar-pdf">Baixar resumo em PDF</button>
+    <button type="button" class="btn btn-secundario mt-8" id="btn-compartilhar-pdf">Compartilhar PDF (WhatsApp)</button>
     <div id="resultado-relatorio" class="mt-16"></div>
   `;
 }
 
-function ligarEventosRelatorio() {
-  const btn = document.getElementById("btn-gerar-relatorio");
-  if (!btn) return;
-  btn.addEventListener("click", () => {
-    const inicio = document.getElementById("rel-inicio").value;
-    const fim = document.getElementById("rel-fim").value;
-    if (!inicio || !fim || inicio > fim) {
-      mostrarToast("Selecione um período válido.", "erro");
-      return;
-    }
-    document.getElementById("resultado-relatorio").innerHTML = gerarRelatorio(inicio, fim);
-    ligarEventosAcoesRelatorio(inicio, fim);
-  });
+function _lerPeriodoRelatorio() {
+  const inicio = document.getElementById("rel-inicio").value;
+  const fim = document.getElementById("rel-fim").value;
+  if (!inicio || !fim || inicio > fim) {
+    mostrarToast("Selecione um período válido.", "erro");
+    return null;
+  }
+  return { inicio, fim };
 }
 
-function gerarRelatorio(inicio, fim) {
-  const evolucao = DB.getEvolucao().filter((e) => e.data >= inicio && e.data <= fim);
-  const pesoInicialPeriodo = evolucao.length ? evolucao[0].peso : null;
-  const pesoFinalPeriodo = evolucao.length ? evolucao[evolucao.length - 1].peso : null;
-  const varPeso = pesoInicialPeriodo !== null && pesoFinalPeriodo !== null ? (pesoFinalPeriodo - pesoInicialPeriodo).toFixed(1) : null;
+function ligarEventosRelatorio() {
+  const area = document.getElementById("area-relatorio");
+  if (!area) return;
 
-  let diasTreinoPrevistos = 0;
-  let diasTreinoRealizados = 0;
-  let cursor = inicio;
-  const diasAlimentacaoComRegistro = new Set();
-  let somaAdesaoAlim = 0;
-  let contDiasAlim = 0;
-  let somaAgua = 0;
-  let contDiasAgua = 0;
+  area.querySelectorAll("[data-preset]").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      resumoPreset = chip.getAttribute("data-preset");
+      const semana = ResumoDados.semanaAtual();
+      const q = ResumoDados.ultimos14();
+      const elIni = document.getElementById("rel-inicio");
+      const elFim = document.getElementById("rel-fim");
+      if (resumoPreset === "semana") { elIni.value = semana.inicio; elFim.value = semana.fim; }
+      else if (resumoPreset === "quinzena") { elIni.value = q.inicio; elFim.value = q.fim; }
+      area.querySelectorAll("[data-preset]").forEach((cc) => cc.classList.toggle("selecionado", cc === chip));
+    });
+  });
 
-  while (cursor <= fim) {
-    const proto = Adesao.treinoDoDia(cursor);
-    if (proto.tipo === "treino") {
-      diasTreinoPrevistos++;
-      const status = Adesao.statusTreinoNoDia(cursor);
-      if (status === "completo") diasTreinoRealizados++;
-      else if (status === "parcial") diasTreinoRealizados += 0.5;
-    }
-    const registrosDia = DB.getAlimentacao().filter((r) => r.data === cursor);
-    if (registrosDia.length) diasAlimentacaoComRegistro.add(cursor);
-    somaAdesaoAlim += Adesao.percentualAlimentacaoDia(cursor);
-    contDiasAlim++;
-    somaAgua += Adesao.totalAguaDia(cursor);
-    contDiasAgua++;
-    cursor = Util.addDias(cursor, 1);
+  const btnGerar = document.getElementById("btn-gerar-relatorio");
+  if (btnGerar) {
+    btnGerar.addEventListener("click", () => {
+      const p = _lerPeriodoRelatorio();
+      if (!p) return;
+      const dados = ResumoDados.calcular(p.inicio, p.fim);
+      document.getElementById("resultado-relatorio").innerHTML = renderPreviaResumo(dados);
+    });
   }
 
-  const adesaoTreinoPct = diasTreinoPrevistos ? Math.round((diasTreinoRealizados / diasTreinoPrevistos) * 100) : 100;
-  const adesaoAlimentarPct = contDiasAlim ? Math.round(somaAdesaoAlim / contDiasAlim) : 0;
-  const mediaHidratacaoL = contDiasAgua ? (somaAgua / contDiasAgua / 1000).toFixed(2) : "0.00";
+  const btnBaixar = document.getElementById("btn-baixar-pdf");
+  if (btnBaixar) btnBaixar.addEventListener("click", () => gerarEExportarResumo("baixar"));
 
-  const checkinsPeriodo = DB.getCheckins().filter((c) => c.data >= inicio && c.data <= fim);
+  const btnCompartilhar = document.getElementById("btn-compartilhar-pdf");
+  if (btnCompartilhar) btnCompartilhar.addEventListener("click", () => gerarEExportarResumo("compartilhar"));
+}
 
-  const exerciciosComEvolucao = {};
-  DB.getTreinos()
-    .filter((t) => t.data >= inicio && t.data <= fim)
-    .forEach((t) => {
-      (t.exercicios || []).forEach((ex) => {
-        const cargas = [];
-        const cd = parseFloat(ex.cargaDetalhe);
-        if (!isNaN(cd)) cargas.push(cd);
-        (ex.seriesLegado || []).forEach((s) => {
-          const c = parseFloat(s.carga);
-          if (s.concluida && !isNaN(c)) cargas.push(c);
-        });
-        if (cargas.length) {
-          if (!exerciciosComEvolucao[ex.nome]) exerciciosComEvolucao[ex.nome] = [];
-          exerciciosComEvolucao[ex.nome].push(Math.max(...cargas));
-        }
-      });
-    });
+async function gerarEExportarResumo(modo) {
+  const p = _lerPeriodoRelatorio();
+  if (!p) return;
+  if (!(window.jspdf && window.jspdf.jsPDF)) {
+    mostrarToast("Biblioteca de PDF ainda não carregou. Tente novamente em instantes.", "erro");
+    return;
+  }
+  const chk = document.getElementById("rel-incluir-fotos");
+  const incluirFotos = !!(chk && chk.checked);
+  mostrarToast("Gerando PDF…", "sucesso");
+  try {
+    const dados = ResumoDados.calcular(p.inicio, p.fim);
+    const { blob, filename } = await ResumoPDF.gerar(dados, { incluirFotos });
+    if (modo === "baixar") {
+      ResumoCompartilhar.baixar(blob, filename);
+      mostrarToast("PDF baixado.", "sucesso");
+    } else {
+      const r = await ResumoCompartilhar.compartilharOuBaixar(blob, filename);
+      if (r === "downloaded") abrirModal(ResumoCompartilhar.instrucoesWhatsApp());
+      else if (r === "shared") mostrarToast("Compartilhamento aberto.", "sucesso");
+    }
+  } catch (e) {
+    console.error(e);
+    mostrarToast("Não foi possível gerar o PDF: " + e.message, "erro");
+  }
+}
 
+function renderPreviaResumo(d) {
+  const tr = d.treino;
+  const a = d.alimentacao;
+  const c = d.cardio;
+  const h = d.hidratacao;
+  const linhaPeso = !d.peso
+    ? "Peso inicial e final: não informado"
+    : `Peso: ${d.peso.inicial} kg (${Util.isoParaBR(d.peso.dataInicial)}) → ${d.peso.final} kg (${Util.isoParaBR(d.peso.dataFinal)})` +
+      (d.peso.variacao === null ? " · variação não informada (um registro)" : ` · ${d.peso.variacao > 0 ? "+" : ""}${d.peso.variacao} kg`);
   return `
     <div id="conteudo-relatorio-impressao">
-      <h3>Relatório — ${Util.isoParaBR(inicio)} a ${Util.isoParaBR(fim)}</h3>
+      <h3>Resumo — ${Util.isoParaBR(d.periodo.inicio)} a ${Util.isoParaBR(d.periodo.fim)}</h3>
+      ${d.periodo.emAndamento ? `<p class="texto-suave">Período em andamento: dias futuros não são contados como falta.</p>` : ""}
       <div class="grid-stats">
-        <div class="stat-box"><span class="valor">${pesoInicialPeriodo !== null ? pesoInicialPeriodo + "kg" : "—"}</span><span class="rotulo">Peso inicial</span></div>
-        <div class="stat-box"><span class="valor">${pesoFinalPeriodo !== null ? pesoFinalPeriodo + "kg" : "—"}</span><span class="rotulo">Peso atual</span></div>
-        <div class="stat-box"><span class="valor">${varPeso !== null ? (varPeso > 0 ? "+" : "") + varPeso + "kg" : "—"}</span><span class="rotulo">Variação de peso</span></div>
-        <div class="stat-box"><span class="valor">${mediaHidratacaoL}L</span><span class="rotulo">Média hidratação/dia</span></div>
-        <div class="stat-box"><span class="valor">${diasTreinoRealizados}/${diasTreinoPrevistos}</span><span class="rotulo">Treinos realizados</span></div>
-        <div class="stat-box"><span class="valor">${adesaoTreinoPct}%</span><span class="rotulo">Adesão treino</span></div>
-        <div class="stat-box"><span class="valor">${adesaoAlimentarPct}%</span><span class="rotulo">Adesão alimentar</span></div>
-        <div class="stat-box"><span class="valor">${checkinsPeriodo.length}</span><span class="rotulo">Check-ins no período</span></div>
+        <div class="stat-box"><span class="valor">${tr.adesaoPct === null ? "—" : tr.adesaoPct + "%"}</span><span class="rotulo">Adesão treino</span></div>
+        <div class="stat-box"><span class="valor">${a.adesaoPct === null ? "—" : a.adesaoPct + "%"}</span><span class="rotulo">Adesão alimentar</span></div>
+        <div class="stat-box"><span class="valor">${c.aejMinTotal}</span><span class="rotulo">AEJ (min)</span></div>
+        <div class="stat-box"><span class="valor">${c.escadaMinTotal}</span><span class="rotulo">Escada (min)</span></div>
       </div>
-
-      <div class="secao-titulo">Evolução de cargas (melhor carga por exercício no período)</div>
-      ${Object.keys(exerciciosComEvolucao).length ? `<ul class="lista-simples">${Object.entries(exerciciosComEvolucao).map(([nome, cargas]) => `<li>${Util.escapeHtml(nome)}: ${Math.max(...cargas)}kg</li>`).join("")}</ul>` : `<p class="texto-suave">Sem registros de carga no período.</p>`}
-
-      <div class="secao-titulo">Observações dos check-ins</div>
-      ${checkinsPeriodo.length ? `<ul class="lista-simples">${checkinsPeriodo.map((c) => `<li><strong>${Util.isoParaBR(c.data)}:</strong> ${Util.escapeHtml(c.observacoes || c.conquista || "sem observações")}</li>`).join("")}</ul>` : `<p class="texto-suave">Nenhum check-in no período.</p>`}
-    </div>
-    <div class="modal-actions">
-      <button type="button" class="btn btn-secundario" id="btn-imprimir-relatorio">Imprimir / salvar PDF</button>
-      <button type="button" class="btn btn-outline" id="btn-compartilhar-relatorio">Compartilhar</button>
+      <p class="texto-suave mt-8">Treinos previstos: ${tr.previstos} · com registro: ${tr.comInfo} · sem informação: ${tr.semInfo} · não feitos: ${tr.naoFeito}</p>
+      <p class="texto-suave">Refeições previstas: ${a.refeicoesPrevistas} · informadas: ${a.refeicoesInformadas} · sem informação: ${a.refeicoesSemInfo}</p>
+      <p class="texto-suave">Hidratação média (dias preenchidos): ${h.mediaL === null ? "—" : h.mediaL.toFixed(2) + " L/dia"} · dias registrados: ${h.diasPreenchidos}</p>
+      <p class="texto-suave">${linhaPeso}</p>
+      ${d.medidas.length ? `<p class="texto-suave">Medidas com registro: ${d.medidas.map((m) => m.rotulo.split(" (")[0]).join(", ")}</p>` : ""}
+      ${d.bemEstar.diasSono || d.bemEstar.diasDisposicao ? `<p class="texto-suave">Sono médio: ${d.bemEstar.mediaSono || "—"} h · disposição média: ${d.bemEstar.mediaDisposicao || "—"}/5</p>` : ""}
+      <p class="texto-suave">Critérios: adesão de treino = (feitos + 0,5×parciais) ÷ treinos previstos com registro; adesão alimentar = média diária (feito 100%, parcial 50%) só dos dias com registro. Dias/refeições sem informação não contam como zero.</p>
     </div>
   `;
-}
-
-function ligarEventosAcoesRelatorio(inicio, fim) {
-  const btnImprimir = document.getElementById("btn-imprimir-relatorio");
-  if (btnImprimir) btnImprimir.addEventListener("click", () => window.print());
-  const btnCompartilhar = document.getElementById("btn-compartilhar-relatorio");
-  if (btnCompartilhar) {
-    btnCompartilhar.addEventListener("click", async () => {
-      const texto = `Relatório VV FIT — ${Util.isoParaBR(inicio)} a ${Util.isoParaBR(fim)}`;
-      if (navigator.share) {
-        try {
-          await navigator.share({ title: "VV FIT — Relatório", text: texto });
-        } catch (e) {
-          /* usuário cancelou */
-        }
-      } else {
-        mostrarToast("Compartilhamento não disponível neste navegador. Use Imprimir / salvar PDF.", "erro");
-      }
-    });
-  }
 }
 
 /* ================= CONFIGURAÇÕES / BACKUP ================= */
@@ -580,6 +653,7 @@ function ligarEventosConfiguracoes() {
     const ok = await confirmarAcao({ titulo: "Apagar registros de treino", mensagem: "Todos os treinos registrados serão apagados. O protocolo de exercícios não será alterado. Confirma?", perigo: true, textoConfirmar: "Apagar" });
     if (ok) {
       DB.clearTreinos();
+      DB.clearCardio();
       Object.keys(localStorage).filter((k) => k.startsWith("vvfit_cron_treino_")).forEach((k) => localStorage.removeItem(k));
       mostrarToast("Registros de treino apagados.", "sucesso");
       renderPerfil();
@@ -639,6 +713,8 @@ async function exportarBackupJSON() {
     treinos: DB.getTreinos(),
     alimentacao: DB.getAlimentacao(),
     agua: DB.getAgua(),
+    cardio: DB.getCardio(),
+    bemestar: DB.getBemEstar(),
     evolucao: DB.getEvolucao(),
     checkins: DB.getCheckins(),
     fotosMeta: DB.getFotosMeta(),
@@ -680,6 +756,8 @@ async function importarBackupJSON(e) {
     if (backup.treinos) DB.setTreinos(backup.treinos);
     if (backup.alimentacao) DB.setAlimentacao(backup.alimentacao);
     if (backup.agua) DB.setAgua(backup.agua);
+    if (backup.cardio) DB.setCardio(backup.cardio);
+    if (backup.bemestar) DB.setBemEstar(backup.bemestar);
     if (backup.evolucao) DB.setEvolucao(backup.evolucao);
     if (backup.checkins) DB.setCheckins(backup.checkins);
     if (backup.fotosMeta) DB.setFotosMeta(backup.fotosMeta);
@@ -707,6 +785,8 @@ function abrirSeletorCSV() {
       <button type="button" class="btn btn-secundario" data-csv="treinos">Treinos</button>
       <button type="button" class="btn btn-secundario" data-csv="alimentacao">Alimentação</button>
       <button type="button" class="btn btn-secundario" data-csv="agua">Água</button>
+      <button type="button" class="btn btn-secundario" data-csv="cardio">AEJ e escada</button>
+      <button type="button" class="btn btn-secundario" data-csv="bemestar">Sono e disposição</button>
       <button type="button" class="btn btn-secundario" data-csv="evolucao">Evolução (medidas)</button>
       <button type="button" class="btn btn-secundario" data-csv="checkins">Check-ins</button>
     </div>
@@ -736,6 +816,12 @@ function exportarCSV(categoria) {
   } else if (categoria === "agua") {
     linhas.push(["data", "hora", "ml"]);
     DB.getAgua().forEach((a) => linhas.push([a.data, a.hora, a.ml]));
+  } else if (categoria === "cardio") {
+    linhas.push(["data", "tipo", "minutos", "obs", "criadoEm"]);
+    DB.getCardio().forEach((c) => linhas.push([c.data, c.tipo, c.minutos, c.obs, c.criadoEm]));
+  } else if (categoria === "bemestar") {
+    linhas.push(["data", "sonoHoras", "disposicao", "obs"]);
+    DB.getBemEstar().forEach((b) => linhas.push([b.data, b.sonoHoras, b.disposicao, b.obs]));
   } else if (categoria === "evolucao") {
     linhas.push(["data", ...CAMPOS_MEDIDAS.map((c) => c.chave), "observacoes"]);
     DB.getEvolucao().forEach((e) => linhas.push([e.data, ...CAMPOS_MEDIDAS.map((c) => e[c.chave]), e.observacoes]));

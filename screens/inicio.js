@@ -120,6 +120,7 @@ function renderInicio() {
     </div>
 
     <button type="button" class="btn btn-outline" id="btn-checkin-inicio">Fazer check-in semanal</button>
+    <button type="button" class="btn btn-primario mt-8" id="btn-resumo-inicio">📄 Exportar resumo semanal em PDF</button>
   `;
 
   if (!ehDescanso) {
@@ -150,6 +151,13 @@ function renderInicio() {
   });
   document.getElementById("btn-checkin-inicio").addEventListener("click", () => {
     abrirFormularioCheckin();
+  });
+  document.getElementById("btn-resumo-inicio").addEventListener("click", () => {
+    navegarPara("perfil");
+    setTimeout(() => {
+      const card = document.getElementById("card-resumo-semanal");
+      if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
   });
 }
 

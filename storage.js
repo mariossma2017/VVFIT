@@ -14,6 +14,8 @@ const DB = {
     cargas: "cargas", // último/melhor registro por exercício (cache derivado)
     alimentacao: "alimentacao", // registros diários de refeição
     agua: "agua", // lançamentos de água
+    cardio: "cardio", // sessões de AEJ e de escada (registradas separadamente)
+    bemestar: "bemestar", // registro diário opcional de sono e disposição
     evolucao: "evolucao", // medidas corporais
     checkins: "checkins", // check-ins semanais
     fotosMeta: "fotosMeta", // metadados de fotos de evolução (id, data, observações) — binário fica no IndexedDB
@@ -62,15 +64,28 @@ const DB = {
   },
 
   getConfig() {
-    return this._read(this.keys.config, {
+    const cfg = this._read(this.keys.config, {
       pesosAdesao: { treino: 40, alimentacao: 40, agua: 10, checkin: 10 },
       somDescanso: true,
       vibrarDescanso: true,
-      tema: "claro"
+      tema: "claro",
+      faseInicio: null // data ISO em que a Fase 1 passa a valer; null = vale sempre
     });
+    if (!("faseInicio" in cfg)) cfg.faseInicio = null;
+    return cfg;
   },
   setConfig(c) {
     return this._write(this.keys.config, c);
+  },
+
+  // Data de início efetiva da Fase 1 (configurável em Perfil).
+  getFaseInicio() {
+    return this.getConfig().faseInicio || null;
+  },
+  setFaseInicio(iso) {
+    const c = this.getConfig();
+    c.faseInicio = iso || null;
+    return this.setConfig(c);
   },
 
   getTreinos() {
@@ -142,6 +157,47 @@ const DB = {
   },
   clearAgua() {
     this.setAgua([]);
+  },
+
+  /* ---- Cardio: AEJ e escada, registrados separadamente ---- */
+  getCardio() {
+    return this._read(this.keys.cardio, []);
+  },
+  setCardio(arr) {
+    return this._write(this.keys.cardio, arr);
+  },
+  addCardio(sessao) {
+    const arr = this.getCardio();
+    arr.push(sessao);
+    arr.sort((a, b) => (a.data + (a.criadoEm || "")).localeCompare(b.data + (b.criadoEm || "")));
+    this.setCardio(arr);
+    return sessao;
+  },
+  removeCardio(id) {
+    this.setCardio(this.getCardio().filter((c) => c.id !== id));
+  },
+  clearCardio() {
+    this.setCardio([]);
+  },
+
+  /* ---- Bem-estar diário: sono e disposição (opcional) ---- */
+  getBemEstar() {
+    return this._read(this.keys.bemestar, []);
+  },
+  setBemEstar(arr) {
+    return this._write(this.keys.bemestar, arr);
+  },
+  addOrUpdateBemEstar(registro) {
+    const arr = this.getBemEstar();
+    const idx = arr.findIndex((r) => r.data === registro.data);
+    if (idx === -1) arr.push(registro);
+    else arr[idx] = Object.assign({}, arr[idx], registro);
+    arr.sort((a, b) => a.data.localeCompare(b.data));
+    this.setBemEstar(arr);
+    return registro;
+  },
+  clearBemEstar() {
+    this.setBemEstar([]);
   },
 
   getEvolucao() {
