@@ -20,7 +20,7 @@ function renderVisaoTreinoDia() {
     <div class="dias-semana-scroll" id="seletor-dias-treino">
       ${PROTOCOLO.ordemDiasSemana
         .map((d) => {
-          const p = PROTOCOLO.treinos[d];
+          const p = Planos.treinoDoDia(diaISOparaEsteDia(d));
           const status = p.tipo === "descanso" ? "descanso" : Adesao.statusTreinoNoDia(diaISOparaEsteDia(d));
           const icone =
             p.tipo === "descanso"
@@ -49,7 +49,7 @@ function renderVisaoTreinoDia() {
   renderConteudoDia(dia);
 }
 
-/* ---------------- Registro de AEJ e escada (separados, por data) ---------------- */
+/* ---------------- Registro de AEJ e cardio (separados, por data) ---------------- */
 function renderRegistroCardio(data) {
   const proto = Planos.vigenteEm(data);
   const diaSemana = Util.isoParaDiaSemana(data);
@@ -61,39 +61,40 @@ function renderRegistroCardio(data) {
 
   const sessoes = DB.getCardio().filter((c) => c.data === data);
   const totalAej = sessoes.filter((s) => s.tipo === "aej").reduce((n, s) => n + (Number(s.minutos) || 0), 0);
-  const totalEscada = sessoes.filter((s) => s.tipo === "escada").reduce((n, s) => n + (Number(s.minutos) || 0), 0);
+  const totalEscada = sessoes.filter((s) => (s.tipo === "escada" || s.tipo === "cardio")).reduce((n, s) => n + (Number(s.minutos) || 0), 0);
 
   return `
     <div class="card-titulo-linha">
-      <h3>🚶 AEJ e escada — hoje</h3>
+      <h3>🚶 AEJ e cardio — hoje</h3>
       <span class="texto-suave">${Util.isoParaBR(data)}</span>
     </div>
     <p class="texto-suave">
-      Previsto hoje: AEJ ${aejPrevisto ? aejPrevisto + " min" : "—"}${escadaPrevista ? " · escada " + Util.escapeHtml(escadaPrevista) : ""}
+      Previsto hoje: AEJ ${aejPrevisto ? aejPrevisto + " min" : "—"}${escadaPrevista ? " · cardio " + Util.escapeHtml(escadaPrevista) : ""}
     </p>
+    ${proto.aej ? `<p class="texto-suave">${Util.escapeHtml(proto.aej.observacao)}</p>` : ""}
     <div class="grid-stats">
       <div class="stat-box"><span class="valor">${totalAej || 0}</span><span class="rotulo">AEJ (min)</span></div>
-      <div class="stat-box"><span class="valor">${totalEscada || 0}</span><span class="rotulo">Escada (min)</span></div>
+      <div class="stat-box"><span class="valor">${totalEscada || 0}</span><span class="rotulo">Cardio (min)</span></div>
     </div>
     <div class="linha-campos mt-16">
       <div class="campo-grupo">
         <label for="cardio-aej-min">AEJ realizado (min)</label>
-        <input type="number" id="cardio-aej-min" inputmode="numeric" min="0" placeholder="Ex: 30">
+        <input type="number" id="cardio-aej-min" inputmode="numeric" min="0" placeholder="Ex: 45">
       </div>
       <button type="button" class="btn btn-secundario btn-pequeno" id="btn-add-aej">Registrar AEJ</button>
     </div>
     <div class="linha-campos">
       <div class="campo-grupo">
-        <label for="cardio-escada-min">Escada realizada (min)</label>
-        <input type="number" id="cardio-escada-min" inputmode="numeric" min="0" placeholder="Ex: 15">
+        <label for="cardio-escada-min">Cardio realizado (min)</label>
+        <input type="number" id="cardio-escada-min" inputmode="numeric" min="0" placeholder="Ex: 60">
       </div>
-      <button type="button" class="btn btn-secundario btn-pequeno" id="btn-add-escada">Registrar escada</button>
+      <button type="button" class="btn btn-secundario btn-pequeno" id="btn-add-escada">Registrar cardio</button>
     </div>
     ${sessoes.length ? `
       <div class="secao-titulo">Sessões de hoje</div>
       ${sessoes.map((s) => `
         <div class="agua-lista-item">
-          <span>${s.tipo === "aej" ? "AEJ" : "Escada"} — ${Number(s.minutos) || 0} min${s.criadoEm ? " · " + new Date(s.criadoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}</span>
+          <span>${s.tipo === "aej" ? "AEJ" : s.tipo === "escada" ? "Escada" : "Cardio"} — ${Number(s.minutos) || 0} min${s.criadoEm ? " · " + new Date(s.criadoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}</span>
           <button type="button" class="btn-icone btn-pequeno" data-remover-cardio="${s.id}" style="width:30px;height:30px;min-height:30px;">✕</button>
         </div>
       `).join("")}
@@ -119,13 +120,13 @@ function ligarEventosRegistroCardio(data) {
       return;
     }
     DB.addCardio({ id: Util.uuid(), data, tipo, minutos: min, obs: "", criadoEm: new Date().toISOString() });
-    mostrarToast(`${tipo === "aej" ? "AEJ" : "Escada"} registrado`, "sucesso");
+    mostrarToast(`${tipo === "aej" ? "AEJ" : "Cardio"} registrado`, "sucesso");
     recarregar();
   };
   const btnAej = document.getElementById("btn-add-aej");
   if (btnAej) btnAej.addEventListener("click", () => addSessao("aej", "cardio-aej-min"));
   const btnEscada = document.getElementById("btn-add-escada");
-  if (btnEscada) btnEscada.addEventListener("click", () => addSessao("escada", "cardio-escada-min"));
+  if (btnEscada) btnEscada.addEventListener("click", () => addSessao("cardio", "cardio-escada-min"));
   document.querySelectorAll("[data-remover-cardio]").forEach((btn) => {
     btn.addEventListener("click", () => {
       DB.removeCardio(btn.getAttribute("data-remover-cardio"));
@@ -168,8 +169,7 @@ function obterSessaoTreino(data, diaSemana) {
 function reconciliarExerciciosComProtocolo(sessao, diaSemana) {
   // Não injeta exercícios da Fase 1 em sessões anteriores ao início da Fase 1:
   // o histórico antigo é preservado exatamente como foi registrado.
-  const faseInicio = DB.getFaseInicio();
-  if (faseInicio && sessao.data < faseInicio) return;
+  if (Planos.vigenteEm(sessao.data) !== PROTOCOLO) return;
   const proto = PROTOCOLO.treinos[diaSemana];
   if (!proto || !proto.exercicios) return;
   let alterou = false;
@@ -196,13 +196,13 @@ function reconciliarExerciciosComProtocolo(sessao, diaSemana) {
 function obterOuCriarSessaoTreino(data, diaSemana) {
   let sessao = obterSessaoTreino(data, diaSemana);
   if (sessao) return sessao;
-  const proto = PROTOCOLO.treinos[diaSemana];
+  const proto = Planos.vigenteEm(data).treinos[diaSemana];
   sessao = {
     id: Util.uuid(),
     data,
     diaSemana,
     treinoNome: proto.nome,
-    exercicios: proto.exercicios.map((ex) => ({
+    exercicios: (proto.exercicios || []).map((ex) => ({
       nome: ex.nome,
       ordem: ex.ordem,
       status: null,
@@ -263,7 +263,7 @@ function definirStatusGeralManual(sessao, novoStatus) {
 function renderConteudoDia(dia) {
   const el = document.getElementById("conteudo-dia-treino");
   if (!el) return;
-  const proto = PROTOCOLO.treinos[dia];
+  const proto = Planos.treinoDoDia(diaISOparaEsteDia(dia));
 
   if (proto.tipo === "descanso") {
     el.innerHTML = `
@@ -305,6 +305,7 @@ function renderConteudoDia(dia) {
 
     <div class="card mt-16">
       <h2>${Util.escapeHtml(proto.nome)}</h2>
+      <p class="texto-suave">${Util.isoParaBR(dataAlvo)} · ${Util.escapeHtml(Planos.nomeFaseEm(dataAlvo))}</p>
       <div class="tag-lista">
         ${proto.grupos.map((g) => `<span class="tag">${Util.escapeHtml(g)}</span>`).join("")}
       </div>
@@ -323,11 +324,11 @@ function renderConteudoDia(dia) {
 
     ${proto.cardio ? `
       <div class="card">
-        <h3>Escada (fim do treino)</h3>
+        <h3>Cardio do plano</h3>
         <p class="texto-suave">${Util.escapeHtml(proto.cardio.equipamento)}${proto.cardio.tempo ? " · " + Util.escapeHtml(proto.cardio.tempo) : ""}</p>
         ${proto.cardio.intensidade ? `<p class="texto-suave">${Util.escapeHtml(proto.cardio.intensidade)}</p>` : ""}
         ${proto.cardio.objetivo ? `<p class="mt-8">${Util.escapeHtml(proto.cardio.objetivo)}</p>` : ""}
-        <p class="texto-suave mt-8">Registre a escada realizada no bloco "AEJ e escada" acima.</p>
+        <p class="texto-suave mt-8">Registre o cardio realizado no bloco "AEJ e cardio" acima.</p>
       </div>
     ` : ""}
 
@@ -929,3 +930,4 @@ function parseDescansoSegundos(str) {
   if (!nums) return 60;
   return Number(nums[0]);
 }
+

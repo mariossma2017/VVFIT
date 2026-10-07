@@ -132,6 +132,14 @@ document.addEventListener("DOMContentLoaded", inicializarApp);
 
 /* ---------------- Service Worker ---------------- */
 if ("serviceWorker" in navigator) {
+  // Atualiza o conteúdo instalado após a ativação do novo cache.
+  let recarregando = false;
+  const tinhaController = Boolean(navigator.serviceWorker.controller);
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!tinhaController || recarregando) return;
+    recarregando = true;
+    window.location.reload();
+  });
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("./service-worker.js")

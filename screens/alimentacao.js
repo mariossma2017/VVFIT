@@ -16,8 +16,9 @@ const STATUS_REFEICAO_LABEL = {
 function renderAlimentacao() {
   const container = document.getElementById("tela-alimentacao");
   const data = dataAlimentacaoSelecionada;
+  const plano = Planos.vigenteEm(data);
   const registros = DB.getAlimentacao().filter((r) => r.data === data && r.status);
-  const previstas = PROTOCOLO.refeicoes.length;
+  const previstas = plano.refeicoes.length;
   const feitas = registros.filter((r) => r.status === "feito" || r.status === "substituicao").length;
   const parciais = registros.filter((r) => r.status === "parcial").length;
   const naoFeitas = registros.filter((r) => r.status === "nao_feito").length;
@@ -30,8 +31,8 @@ function renderAlimentacao() {
         <h2>Alimentação</h2>
         <input type="date" id="input-data-alimentacao" value="${data}" max="${Util.hojeISO()}">
       </div>
-      <p class="texto-suave">${PROTOCOLO.refeicoes.length} refeições · ${Util.escapeHtml(PROTOCOLO.fase ? PROTOCOLO.fase.nome : "Plano")}</p>
-      ${PROTOCOLO.orientacoes ? `<p class="texto-suave">${Util.escapeHtml(PROTOCOLO.orientacoes.hidratacao)}</p>` : ""}
+      <p class="texto-suave">${plano.refeicoes.length} refeições · ${Util.escapeHtml(plano.fase ? plano.fase.nome : "Plano")}</p>
+      ${plano.orientacoes ? `<p class="texto-suave">${Util.escapeHtml(plano.orientacoes.hidratacao)}</p>` : ""}
       <div class="progress-bar-track mt-8"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
       <p class="texto-suave mt-8">${pct}% de adesão hoje</p>
       <div class="grid-stats">
@@ -47,7 +48,7 @@ function renderAlimentacao() {
     </div>
 
     <div id="lista-refeicoes">
-      ${PROTOCOLO.refeicoes.map((r) => renderCardRefeicao(r, data)).join("")}
+      ${plano.refeicoes.map((r) => renderCardRefeicao(r, data)).join("")}
     </div>
 
     <div class="card">
@@ -92,7 +93,7 @@ function renderCardRefeicao(refeicao, data) {
         </div>
       </div>
 
-      ${refeicao.opcoes.map((op) => renderOpcaoRefeicao(op, refeicao.opcoes.length > 1)).join("")}
+      ${(refeicao.opcoes || []).map((op) => renderOpcaoRefeicao(op, refeicao.opcoes.length > 1)).join("")}
 
       ${refeicao.substituicoes && refeicao.substituicoes.length ? `
         <div class="secao-titulo">Substituições equivalentes</div>
@@ -112,7 +113,7 @@ function renderCardRefeicao(refeicao, data) {
         <button type="button" class="btn-status ${status === "nao_feito" ? "ativo-nao-feito" : ""}" data-status="nao_feito">❌ Não feito</button>
       </div>
 
-      ${refeicao.opcoes.length > 1 ? `
+      ${(refeicao.opcoes || []).length > 1 ? `
       <div class="chip-opcoes mt-8 ${status === "feito" ? "" : "hidden"}" data-bloco-opcao>
         ${refeicao.opcoes.map((op) => `<div class="chip ${registro.opcaoEscolhida === op.id ? "selecionado" : ""}" data-opcao="${op.id}">${Util.escapeHtml(op.nome)}</div>`).join("")}
       </div>
@@ -275,7 +276,7 @@ function ligarEventosResumoDia(data) {
         textoConfirmar: "Marcar todas"
       });
       if (!ok) return;
-      PROTOCOLO.refeicoes.forEach((r) => salvarRegistroRefeicao(data, r.id, { status: "feito" }));
+      Planos.refeicoesDoDia(data).forEach((r) => salvarRegistroRefeicao(data, r.id, { status: "feito" }));
       mostrarToast("Refeições marcadas como feitas", "sucesso");
       renderAlimentacao();
     });
@@ -291,7 +292,7 @@ function ligarEventosResumoDia(data) {
         textoConfirmar: "Limpar"
       });
       if (!ok) return;
-      PROTOCOLO.refeicoes.forEach((r) => salvarRegistroRefeicao(data, r.id, { status: null, opcaoEscolhida: null, substituicaoTexto: "" }));
+      Planos.refeicoesDoDia(data).forEach((r) => salvarRegistroRefeicao(data, r.id, { status: null, opcaoEscolhida: null, substituicaoTexto: "" }));
       mostrarToast("Marcações limpas", "sucesso");
       renderAlimentacao();
     });

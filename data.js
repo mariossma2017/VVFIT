@@ -1,3 +1,929 @@
+/* VV FIT — Fase 2. Transcrição do plano recebido; sem metas inventadas. */
+const PROTOCOLO = {
+  "versao": "4.0",
+  "fase": {
+    "id": "fase2",
+    "nome": "Fase 2",
+    "fonte": "PLANO VERÔNICA 2.pdf",
+    "observacao": "Início da Fase 2 configurável em Perfil. Histórico das fases anteriores preservado."
+  },
+  "perfilBase": {
+    "idade": 36,
+    "alturaCm": 156,
+    "pesoInicialKg": 74,
+    "objetivo": "Redução de gordura com desenvolvimento de glúteo e posterior",
+    "frequenciaTreino": "6 dias por semana (segunda a sábado)",
+    "diasTreino": [
+      "segunda",
+      "terca",
+      "quarta",
+      "quinta",
+      "sexta",
+      "sabado"
+    ],
+    "diasDescanso": [
+      "domingo"
+    ],
+    "horarioTreinoHabitual": "20:00",
+    "horarioSonoHabitual": "23:30"
+  },
+  "gastoEnergetico": null,
+  "macros": null,
+  "agua": {
+    "metaLitrosMin": 3,
+    "metaLitrosMax": 3,
+    "metaMlPadrao": 3000,
+    "chaMl": 500,
+    "chaTipo": "cavalinha + hibisco",
+    "observacao": "3 litros de água por dia + 500 ml de chá (cavalinha + hibisco). Não utilizar açúcar nos alimentos nem óleo. Não ultrapassar 6 g de sal por dia."
+  },
+  "refeicoes": [
+    {
+      "id": "ref1",
+      "ordem": 1,
+      "nome": "1ª Refeição",
+      "horario": "",
+      "kcalAprox": null,
+      "finalidade": "",
+      "opcoes": [
+        {
+          "id": "opcao1",
+          "nome": "Composição",
+          "itens": [
+            {
+              "alimento": "Pão francês",
+              "quantidade": "1 unidade"
+            },
+            {
+              "alimento": "Claras + gema",
+              "quantidade": "2 claras + 1 gema"
+            },
+            {
+              "alimento": "Requeijão cremoso light",
+              "quantidade": "10 g"
+            },
+            {
+              "alimento": "Mamão + chia",
+              "quantidade": "100 g mamão + 5 g chia"
+            },
+            {
+              "alimento": "Café preto (adoçante e leite desnatado opcionais)",
+              "quantidade": ""
+            }
+          ],
+          "totalAprox": null,
+          "observacao": ""
+        }
+      ],
+      "substituicoes": []
+    },
+    {
+      "id": "ref2",
+      "ordem": 2,
+      "nome": "2ª Refeição",
+      "horario": "",
+      "kcalAprox": null,
+      "finalidade": "",
+      "opcoes": [
+        {
+          "id": "opcao1",
+          "nome": "Composição",
+          "itens": [
+            {
+              "alimento": "Arroz cozido ou macarrão cozido com molho de tomate natural",
+              "quantidade": "100 g"
+            },
+            {
+              "alimento": "Peito de frango ou carne magra",
+              "quantidade": "100 g frango ou 80 g carne magra"
+            },
+            {
+              "alimento": "Salada verde à vontade (free)",
+              "quantidade": ""
+            }
+          ],
+          "totalAprox": null,
+          "observacao": ""
+        }
+      ],
+      "substituicoes": []
+    },
+    {
+      "id": "ref3",
+      "ordem": 3,
+      "nome": "3ª Refeição — lanche da tarde",
+      "horario": "",
+      "kcalAprox": null,
+      "finalidade": "",
+      "opcoes": [
+        {
+          "id": "opcao1",
+          "nome": "Composição",
+          "itens": [
+            {
+              "alimento": "Mix de frutas (mamão, morango, maçã, pera)",
+              "quantidade": "100 g"
+            },
+            {
+              "alimento": "Iogurte desnatado",
+              "quantidade": "1 unidade (160 ml)"
+            },
+            {
+              "alimento": "Whey protein",
+              "quantidade": "30 g"
+            }
+          ],
+          "totalAprox": null,
+          "observacao": ""
+        }
+      ],
+      "substituicoes": []
+    },
+    {
+      "id": "ref4",
+      "ordem": 4,
+      "nome": "4ª Refeição — pré-treino",
+      "horario": "",
+      "kcalAprox": null,
+      "finalidade": "",
+      "opcoes": [
+        {
+          "id": "opcao1",
+          "nome": "Composição",
+          "itens": [
+            {
+              "alimento": "Pão francês",
+              "quantidade": "1 unidade"
+            },
+            {
+              "alimento": "Doce de leite ou mel",
+              "quantidade": "20 g"
+            }
+          ],
+          "totalAprox": null,
+          "observacao": ""
+        }
+      ],
+      "substituicoes": []
+    },
+    {
+      "id": "ref5",
+      "ordem": 5,
+      "nome": "5ª Refeição",
+      "horario": "",
+      "kcalAprox": null,
+      "finalidade": "",
+      "opcoes": [
+        {
+          "id": "opcao1",
+          "nome": "Composição",
+          "itens": [
+            {
+              "alimento": "Peito de frango ou carne magra",
+              "quantidade": "100 g frango ou 80 g carne magra"
+            },
+            {
+              "alimento": "Mix de legumes (cenoura, beterraba, abobrinha)",
+              "quantidade": "200 g"
+            },
+            {
+              "alimento": "Salada verde à vontade (folhas)",
+              "quantidade": ""
+            },
+            {
+              "alimento": "Azeite virgem",
+              "quantidade": "5 g"
+            }
+          ],
+          "totalAprox": null,
+          "observacao": ""
+        }
+      ],
+      "substituicoes": []
+    }
+  ],
+  "suplementacao": {
+    "aviso": "Informação transcrita do plano recebido (PLANO VERÔNICA 2.pdf). Espaço apenas para consulta. O aplicativo não cria prescrições, não ajusta doses e não faz recomendações automáticas. Qualquer dúvida deve ser tratada com o profissional responsável.",
+    "blocos": [
+      {
+        "titulo": "Pré AEJ",
+        "itens": [
+          "10 mg ioimbina",
+          "500 ml de água"
+        ]
+      },
+      {
+        "titulo": "1ª refeição",
+        "itens": [
+          "1 cápsula de multivitamínico + 1 g de vitamina C",
+          "500 mg Morosil"
+        ]
+      },
+      {
+        "titulo": "Antes de dormir",
+        "itens": [
+          "3 cápsulas de ômega 3"
+        ]
+      },
+      {
+        "titulo": "Pré-treino (opções)",
+        "itens": [
+          "210 mg de cafeína OU pré-treino opcional (15 min antes do treino)"
+        ]
+      },
+      {
+        "titulo": "Intra-treino",
+        "itens": [
+          "1 litro de água",
+          "1 g de sal",
+          "7 g de creatina",
+          "7 g EAAS 9 (aminoácido)"
+        ]
+      }
+    ]
+  },
+  "orientacoes": {
+    "hidratacao": "3 litros de água por dia + 500 ml de chá (cavalinha + hibisco). Não utilizar açúcar nos alimentos nem óleo. Não ultrapassar 6 g de sal por dia.",
+    "descansoEntreSeries": "50 segundos entre séries normais; 60 segundos quando for bi-série.",
+    "treino": "Progredir a carga e executar os exercícios com amplitude. Alongar quando puder e fazer mobilidade.",
+    "refeicaoLivre": "1 refeição livre na semana, a cada 2 semanas (após avaliação).",
+    "feedback": "O feedback deve ser enviado a cada 2 semanas, em jejum, no sábado ou domingo."
+  },
+  "aej": {
+    "minutos": 45,
+    "dias": [
+      "segunda",
+      "terca",
+      "quarta",
+      "quinta",
+      "sexta",
+      "sabado",
+      "domingo"
+    ],
+    "limiteBpm": 120,
+    "observacao": "Cardio em jejum todos os dias: 45 min (não ultrapassar 120 bpm). O documento também indica descanso total no domingo; confirmar essa orientação com o profissional responsável."
+  },
+  "treinos": {
+    "segunda": {
+      "diaSemana": "segunda",
+      "label": "Segunda-feira",
+      "tipo": "treino",
+      "nome": "Glúteo",
+      "grupos": [
+        "Glúteo"
+      ],
+      "objetivoDia": "",
+      "observacaoDia": "50 segundos entre séries normais; 60 segundos quando for bi-série. Progredir a carga e executar os exercícios com amplitude. Alongar quando puder e fazer mobilidade.",
+      "aquecimento": {
+        "equipamento": "Mobilidade",
+        "tempo": "5 min",
+        "intensidade": ""
+      },
+      "exercicios": [
+        {
+          "ordem": 1,
+          "nome": "Cadeira abdutora",
+          "esquema": "1x25 + 2x15",
+          "series": null,
+          "repeticoes": "1x25 + 2x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 2,
+          "nome": "Sumô com halter",
+          "esquema": "1x20 + 3x15",
+          "series": null,
+          "repeticoes": "1x20 + 3x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 3,
+          "nome": "Elevação pélvica",
+          "esquema": "1x20 + 3x12 + 1x8",
+          "series": null,
+          "repeticoes": "1x20 + 3x12 + 1x8",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 4,
+          "nome": "RDL bilateral",
+          "esquema": "4x15",
+          "series": null,
+          "repeticoes": "4x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 5,
+          "nome": "Búlgaro no smith",
+          "esquema": "1x15 + 3x12",
+          "series": null,
+          "repeticoes": "1x15 + 3x12",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 6,
+          "nome": "Coice cross",
+          "esquema": "4x15",
+          "series": null,
+          "repeticoes": "4x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        }
+      ],
+      "cardio": null,
+      "progressao": "Progredir a carga quando conseguir completar todas as séries com boa amplitude. Descanso: 50 s (normal) / 60 s (bi-série)."
+    },
+    "terca": {
+      "diaSemana": "terca",
+      "label": "Terça-feira",
+      "tipo": "treino",
+      "nome": "Upper + ABD",
+      "grupos": [
+        "Ombros",
+        "Bíceps",
+        "Abdômen"
+      ],
+      "objetivoDia": "",
+      "observacaoDia": "50 segundos entre séries normais; 60 segundos quando for bi-série. Progredir a carga e executar os exercícios com amplitude. Alongar quando puder e fazer mobilidade.",
+      "aquecimento": {
+        "equipamento": "Mobilidade",
+        "tempo": "5 min",
+        "intensidade": ""
+      },
+      "exercicios": [
+        {
+          "ordem": 1,
+          "nome": "Elevação lateral cross",
+          "esquema": "1x20 + 3x15",
+          "series": null,
+          "repeticoes": "1x20 + 3x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 2,
+          "nome": "Elevação lateral + frontal com halter (bi-série)",
+          "esquema": "3x10 + 10",
+          "series": null,
+          "repeticoes": "3x10 + 10",
+          "descanso": "60s",
+          "biserie": true,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 3,
+          "nome": "Rosca direta barra",
+          "esquema": "1x15 + 2x12",
+          "series": null,
+          "repeticoes": "1x15 + 2x12",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 4,
+          "nome": "Rosca alternada halter",
+          "esquema": "2x15",
+          "series": null,
+          "repeticoes": "2x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 5,
+          "nome": "Abdominal infra unilateral",
+          "esquema": "3x15",
+          "series": null,
+          "repeticoes": "3x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 6,
+          "nome": "Abdominal infra bilateral",
+          "esquema": "3x15",
+          "series": null,
+          "repeticoes": "3x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        }
+      ],
+      "cardio": null,
+      "progressao": "Progredir a carga com boa amplitude. Descanso: 50 s (normal) / 60 s (bi-série)."
+    },
+    "quarta": {
+      "diaSemana": "quarta",
+      "label": "Quarta-feira",
+      "tipo": "treino",
+      "nome": "Quadríceps completo",
+      "grupos": [
+        "Quadríceps",
+        "Posterior",
+        "Panturrilha"
+      ],
+      "objetivoDia": "",
+      "observacaoDia": "50 segundos entre séries normais; 60 segundos quando for bi-série. Progredir a carga e executar os exercícios com amplitude. Alongar quando puder e fazer mobilidade.",
+      "aquecimento": {
+        "equipamento": "Mobilidade",
+        "tempo": "5 min",
+        "intensidade": ""
+      },
+      "exercicios": [
+        {
+          "ordem": 1,
+          "nome": "Agachamento smith",
+          "esquema": "1x15 + 3x12",
+          "series": null,
+          "repeticoes": "1x15 + 3x12",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 2,
+          "nome": "Afundo com step na frente",
+          "esquema": "4x15",
+          "series": null,
+          "repeticoes": "4x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 3,
+          "nome": "Cadeira flexora",
+          "esquema": "3x15",
+          "series": null,
+          "repeticoes": "3x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 4,
+          "nome": "Stiff barra",
+          "esquema": "3x15",
+          "series": null,
+          "repeticoes": "3x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 5,
+          "nome": "Cadeira extensora unilateral",
+          "esquema": "1x20",
+          "series": null,
+          "repeticoes": "1x20",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 6,
+          "nome": "Cadeira extensora bilateral",
+          "esquema": "1x12 + 3x10",
+          "series": null,
+          "repeticoes": "1x12 + 3x10",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "Isometria de 2 segundos no pico de contração",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 7,
+          "nome": "Panturrilha leg 45°",
+          "esquema": "4x12",
+          "series": null,
+          "repeticoes": "4x12",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        }
+      ],
+      "cardio": null,
+      "progressao": "Progredir a carga com boa amplitude. Descanso: 50 s (normal) / 60 s (bi-série)."
+    },
+    "quinta": {
+      "diaSemana": "quinta",
+      "label": "Quinta-feira",
+      "tipo": "treino",
+      "nome": "Cardio",
+      "grupos": [
+        "Cardio"
+      ],
+      "objetivoDia": "",
+      "observacaoDia": "50 segundos entre séries normais; 60 segundos quando for bi-série. Progredir a carga e executar os exercícios com amplitude. Alongar quando puder e fazer mobilidade.",
+      "aquecimento": null,
+      "exercicios": [],
+      "cardio": {
+        "equipamento": "Cardio",
+        "tempo": "60 min",
+        "intensidade": "",
+        "objetivo": ""
+      },
+      "progressao": "Progredir a carga com boa amplitude. Descanso: 50 s (normal) / 60 s (bi-série)."
+    },
+    "sexta": {
+      "diaSemana": "sexta",
+      "label": "Sexta-feira",
+      "tipo": "treino",
+      "nome": "Glúteo",
+      "grupos": [
+        "Glúteo"
+      ],
+      "objetivoDia": "",
+      "observacaoDia": "50 segundos entre séries normais; 60 segundos quando for bi-série. Progredir a carga e executar os exercícios com amplitude. Alongar quando puder e fazer mobilidade.",
+      "aquecimento": {
+        "equipamento": "Mobilidade",
+        "tempo": "5 min",
+        "intensidade": ""
+      },
+      "exercicios": [
+        {
+          "ordem": 1,
+          "nome": "Cadeira abdutora",
+          "esquema": "1x25 + 2x15",
+          "series": null,
+          "repeticoes": "1x25 + 2x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 2,
+          "nome": "Sumô com halter",
+          "esquema": "1x20 + 3x15",
+          "series": null,
+          "repeticoes": "1x20 + 3x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 3,
+          "nome": "Elevação pélvica",
+          "esquema": "1x20 + 3x12 + 1x8",
+          "series": null,
+          "repeticoes": "1x20 + 3x12 + 1x8",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 4,
+          "nome": "RDL bilateral",
+          "esquema": "4x15",
+          "series": null,
+          "repeticoes": "4x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 5,
+          "nome": "Búlgaro no smith",
+          "esquema": "1x15 + 3x12",
+          "series": null,
+          "repeticoes": "1x15 + 3x12",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 6,
+          "nome": "Coice cross",
+          "esquema": "4x15",
+          "series": null,
+          "repeticoes": "4x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        }
+      ],
+      "cardio": null,
+      "progressao": "Progredir a carga com boa amplitude. Descanso: 50 s (normal) / 60 s (bi-série)."
+    },
+    "sabado": {
+      "diaSemana": "sabado",
+      "label": "Sábado",
+      "tipo": "treino",
+      "nome": "Upper + ABD + Cardio",
+      "grupos": [
+        "Costas",
+        "Tríceps",
+        "Abdômen"
+      ],
+      "objetivoDia": "",
+      "observacaoDia": "50 segundos entre séries normais; 60 segundos quando for bi-série. Progredir a carga e executar os exercícios com amplitude. Alongar quando puder e fazer mobilidade. O título do plano inclui cardio, mas não informa duração adicional para sábado.",
+      "aquecimento": null,
+      "exercicios": [
+        {
+          "ordem": 1,
+          "nome": "Puxador aberto",
+          "esquema": "1x20 + 3x15",
+          "series": null,
+          "repeticoes": "1x20 + 3x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 2,
+          "nome": "Remada baixa cross barra",
+          "esquema": "3x15",
+          "series": null,
+          "repeticoes": "3x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 3,
+          "nome": "Tríceps coice cross",
+          "esquema": "3x15",
+          "series": null,
+          "repeticoes": "3x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 4,
+          "nome": "Tríceps corda",
+          "esquema": "3x15",
+          "series": null,
+          "repeticoes": "3x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 5,
+          "nome": "Abdominal infra",
+          "esquema": "4x15",
+          "series": null,
+          "repeticoes": "4x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 6,
+          "nome": "Abdominal solo livre",
+          "esquema": "3x15",
+          "series": null,
+          "repeticoes": "3x15",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        },
+        {
+          "ordem": 7,
+          "nome": "Prancha isométrica",
+          "esquema": "3x1 min",
+          "series": null,
+          "repeticoes": "3x1 min",
+          "descanso": "50s",
+          "biserie": false,
+          "equipamento": "",
+          "cadencia": "",
+          "intensidade": "",
+          "grupoMuscular": "",
+          "execucao": "",
+          "errosComuns": "",
+          "objetivo": ""
+        }
+      ],
+      "cardio": null,
+      "progressao": "Progredir com amplitude e controle. Descanso: 50 s."
+    },
+    "domingo": {
+      "diaSemana": "domingo",
+      "label": "Domingo",
+      "tipo": "descanso",
+      "nome": "Descanso total"
+    }
+  },
+  "resumoSemanal": {
+    "volumeGluteo": "2x/semana (segunda e sexta)",
+    "volumeUpper": "2x/semana (terça e sábado)",
+    "quadriceps": "1x/semana (quarta)",
+    "abdomen": "2x/semana (terça e sábado)",
+    "cardioEscada": "Quinta: 60 min de cardio. Sábado: cardio sem duração adicional definida.",
+    "aej": "45 min todos os dias, não ultrapassar 120 bpm (confirmar domingo, também descrito como descanso total)."
+  },
+  "ordemDiasSemana": [
+    "segunda",
+    "terca",
+    "quarta",
+    "quinta",
+    "sexta",
+    "sabado",
+    "domingo"
+  ]
+};
+
 /*
  * VV FIT — dados oficiais do protocolo
  *
@@ -21,7 +947,7 @@
  *    cria prescrições, não ajusta doses e não recomenda nada automaticamente.
  */
 
-const PROTOCOLO = {
+const PROTOCOLO_FASE1 = {
   versao: "3.0",
 
   fase: {
@@ -481,3 +1407,4 @@ const DIAS_CURTO = {
   sabado: "Sáb",
   domingo: "Dom"
 };
+

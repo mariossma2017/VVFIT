@@ -168,9 +168,11 @@ const Planos = {
     return DB.getFaseInicio();
   },
   vigenteEm(iso) {
-    const ini = this.faseInicio();
-    if (!ini) return this.ATIVO;
-    return iso >= ini ? this.ATIVO : this.LEGADO;
+    const cfg = DB.getConfig();
+    const inicio2 = cfg.fase2Inicio || '2026-10-06';
+    if (iso >= inicio2) return this.ATIVO;
+    const inicio1 = cfg.faseInicio;
+    return !inicio1 || iso >= inicio1 ? PROTOCOLO_FASE1 : this.LEGADO;
   },
   ehFase1Em(iso) {
     return this.vigenteEm(iso) === this.ATIVO;
@@ -444,13 +446,14 @@ function mostrarInstrucoesInstalacao() {
 
 /* ---------------- Migração de dados (registro simplificado por botões) ---------------- */
 const Migracao = {
-  VERSAO_ATUAL: 3,
+  VERSAO_ATUAL: 4,
 
   executar() {
     const atual = DB.getVersaoDados() || 1;
     if (atual >= this.VERSAO_ATUAL) return;
     if (atual < 2) this._migrarParaV2();
     if (atual < 3) this._migrarParaV3();
+    if (atual < 4) this._migrarParaV4();
     DB.setVersaoDados(this.VERSAO_ATUAL);
   },
 
@@ -472,6 +475,12 @@ const Migracao = {
    *     (2350 ml) ou vazia — uma meta personalizada pela usuária é mantida.
    *     Os lançamentos de água (vvfit_agua) não são tocados.
    */
+  _migrarParaV4() {
+    const cfg = DB.getConfig();
+    if (!cfg.fase2Inicio) cfg.fase2Inicio = '2026-10-06';
+    DB.setConfig(cfg);
+  },
+
   _migrarParaV3() {
     const cfg = DB.getConfig();
     if (!cfg.faseInicio) {
@@ -545,3 +554,4 @@ const Migracao = {
     DB.setAlimentacao(alimentacao);
   }
 };
+

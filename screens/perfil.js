@@ -31,7 +31,7 @@ function renderPerfil() {
       <p class="texto-suave"><strong>Dias de descanso:</strong> ${base.diasDescanso.map((d) => DIAS_LABEL[d]).join(", ")}</p>
       <p class="texto-suave"><strong>Horário do treino:</strong> ${Util.escapeHtml(perfil.horarioTreino || base.horarioTreinoHabitual)}</p>
       <p class="texto-suave"><strong>Meta de água:</strong> ${((perfil.metaAguaMl || PROTOCOLO.agua.metaMlPadrao) / 1000).toFixed(1)} L/dia${PROTOCOLO.agua.chaMl ? ` + ${PROTOCOLO.agua.chaMl} ml de chá de ${Util.escapeHtml(PROTOCOLO.agua.chaTipo || "")}` : ""}</p>
-      ${PROTOCOLO.macros ? "" : `<p class="texto-suave">A Fase 1 não define metas calóricas ou de macronutrientes — esses números não constam no documento e não são exibidos.</p>`}
+      ${PROTOCOLO.macros ? "" : `<p class="texto-suave">A Fase 2 não define metas calóricas ou de macronutrientes — esses números não constam no documento e não são exibidos.</p>`}
       ${perfil.observacoes ? `<div class="divider"></div><p class="texto-suave"><strong>Observações:</strong> ${Util.escapeHtml(perfil.observacoes)}</p>` : ""}
     </div>
 
@@ -81,14 +81,14 @@ function renderPerfil() {
 /* ================= FASE DO PLANO ================= */
 function renderCardFase() {
   const cfg = DB.getConfig();
-  const inicio = cfg.faseInicio;
+  const inicio = cfg.fase2Inicio;
   const o = PROTOCOLO.orientacoes || {};
   return `
     <p class="texto-suave"><strong>Fase atual:</strong> ${Util.escapeHtml(PROTOCOLO.fase ? PROTOCOLO.fase.nome : "Plano")}</p>
     <p class="texto-suave"><strong>Fonte:</strong> ${Util.escapeHtml(PROTOCOLO.fase ? PROTOCOLO.fase.fonte : "—")}</p>
-    <label for="fase-inicio">Data de início da Fase 1</label>
+    <label for="fase-inicio">Data de início da Fase 2</label>
     <input type="date" id="fase-inicio" value="${inicio || ""}" max="${Util.hojeISO()}">
-    <p class="texto-suave">Datas anteriores a esta continuam sendo calculadas pelo plano anterior, preservando o histórico. Em branco, a Fase 1 vale para todas as datas.</p>
+    <p class="texto-suave">Datas anteriores seguem a Fase 1 e seu início já configurado. A Fase 2 começa em 06/10/2026 por padrão; ajuste a data se necessário.</p>
     <button type="button" class="btn btn-outline btn-pequeno mt-8" id="btn-salvar-fase-inicio">Salvar data de início</button>
     <div class="divider"></div>
     <div class="secao-titulo">Orientações do documento</div>
@@ -126,8 +126,14 @@ function ligarEventosFase() {
   if (btnFase) {
     btnFase.addEventListener("click", () => {
       const val = document.getElementById("fase-inicio").value || null;
-      DB.setFaseInicio(val);
-      mostrarToast("Data de início da Fase 1 salva.", "sucesso");
+      const cfg = DB.getConfig();
+      cfg.fase2Inicio = val || '2026-10-06';
+      if (cfg.faseInicio && cfg.fase2Inicio < cfg.faseInicio) {
+        mostrarToast('A Fase 2 não pode começar antes da Fase 1.', 'erro');
+        return;
+      }
+      DB.setConfig(cfg);
+      mostrarToast("Data de início da Fase 2 salva.", "sucesso");
       renderPerfil();
     });
   }
@@ -449,7 +455,7 @@ function renderFormRelatorio() {
   const semana = ResumoDados.semanaAtual();
   const q = ResumoDados.ultimos14();
   return `
-    <p class="texto-suave">Gera um resumo do acompanhamento (treinos, AEJ/escada, alimentação, hidratação, peso, medidas, sono/disposição e observações) para baixar em PDF ou compartilhar no WhatsApp.</p>
+    <p class="texto-suave">Gera um resumo do acompanhamento (treinos, AEJ/cardio, alimentação, hidratação, peso, medidas, sono/disposição e observações) para baixar em PDF ou compartilhar no WhatsApp.</p>
     <label>Período</label>
     <div class="chip-opcoes">
       <div class="chip ${resumoPreset === "semana" ? "selecionado" : ""}" data-preset="semana">Semana (seg–dom)</div>
@@ -559,7 +565,7 @@ function renderPreviaResumo(d) {
         <div class="stat-box"><span class="valor">${tr.adesaoPct === null ? "—" : tr.adesaoPct + "%"}</span><span class="rotulo">Adesão treino</span></div>
         <div class="stat-box"><span class="valor">${a.adesaoPct === null ? "—" : a.adesaoPct + "%"}</span><span class="rotulo">Adesão alimentar</span></div>
         <div class="stat-box"><span class="valor">${c.aejMinTotal}</span><span class="rotulo">AEJ (min)</span></div>
-        <div class="stat-box"><span class="valor">${c.escadaMinTotal}</span><span class="rotulo">Escada (min)</span></div>
+        <div class="stat-box"><span class="valor">${c.escadaMinTotal}</span><span class="rotulo">Cardio (min)</span></div>
       </div>
       <p class="texto-suave mt-8">Treinos previstos: ${tr.previstos} · com registro: ${tr.comInfo} · sem informação: ${tr.semInfo} · não feitos: ${tr.naoFeito}</p>
       <p class="texto-suave">Refeições previstas: ${a.refeicoesPrevistas} · informadas: ${a.refeicoesInformadas} · sem informação: ${a.refeicoesSemInfo}</p>
@@ -785,7 +791,7 @@ function abrirSeletorCSV() {
       <button type="button" class="btn btn-secundario" data-csv="treinos">Treinos</button>
       <button type="button" class="btn btn-secundario" data-csv="alimentacao">Alimentação</button>
       <button type="button" class="btn btn-secundario" data-csv="agua">Água</button>
-      <button type="button" class="btn btn-secundario" data-csv="cardio">AEJ e escada</button>
+      <button type="button" class="btn btn-secundario" data-csv="cardio">AEJ e cardio</button>
       <button type="button" class="btn btn-secundario" data-csv="bemestar">Sono e disposição</button>
       <button type="button" class="btn btn-secundario" data-csv="evolucao">Evolução (medidas)</button>
       <button type="button" class="btn btn-secundario" data-csv="checkins">Check-ins</button>
@@ -847,3 +853,4 @@ function exportarCSV(categoria) {
   document.querySelector(".modal-overlay")?.remove();
   mostrarToast("CSV exportado!", "sucesso");
 }
+

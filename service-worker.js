@@ -1,6 +1,6 @@
 /* VV FIT — service worker: cache offline e atualização de versão */
 
-const CACHE_VERSAO = "vvfit-v3.0.0";
+const CACHE_VERSAO = "vvfit-v4.0.0";
 
 const ARQUIVOS_ESSENCIAIS = [
   "./",
@@ -67,3 +67,4 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+

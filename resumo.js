@@ -113,7 +113,7 @@ const ResumoDados = {
     /* ---------- AEJ / escada realizados ---------- */
     const cardioPeriodo = DB.getCardio().filter((c) => c.data >= inicio && c.data <= fimEfetivo);
     const aejSessoes = cardioPeriodo.filter((c) => c.tipo === "aej");
-    const escadaSessoes = cardioPeriodo.filter((c) => c.tipo === "escada");
+    const escadaSessoes = cardioPeriodo.filter((c) => (c.tipo === "escada" || c.tipo === "cardio"));
     const aejMinTotal = aejSessoes.reduce((n, s) => n + (Number(s.minutos) || 0), 0);
     const escadaMinTotal = escadaSessoes.reduce((n, s) => n + (Number(s.minutos) || 0), 0);
 
@@ -326,11 +326,11 @@ const ResumoPDF = {
       espaco(2);
     }
 
-    /* ---- AEJ e escada ---- */
+    /* ---- AEJ e cardio ---- */
     const c = dados.cardio;
-    titulo("AEJ e escada (registrados separadamente)");
+    titulo("AEJ e cardio (registrados separadamente)");
     linha(`AEJ — sessões: ${c.aejSessoes}  |  minutos: ${c.aejMinTotal}  |  dias previstos no período: ${c.aejPrevistoDias}`);
-    linha(`Escada — sessões: ${c.escadaSessoes}  |  minutos: ${c.escadaMinTotal}  |  minutos previstos no período: ${c.escadaPrevistoMin}`);
+    linha(`Cardio — sessões: ${c.escadaSessoes}  |  minutos: ${c.escadaMinTotal}  |  minutos previstos no período: ${c.escadaPrevistoMin}`);
     espaco(2);
 
     /* ---- Alimentação ---- */
@@ -520,3 +520,4 @@ const ResumoCompartilhar = {
     `;
   }
 };
+
